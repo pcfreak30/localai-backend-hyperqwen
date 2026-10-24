@@ -1,0 +1,20 @@
+# Allowlist: never send runtime copies, weights, caches or evidence to Docker.
+**
+!Dockerfile
+!requirements.lock
+!runtime.lock.json
+!LICENSE
+!THIRD_PARTY_NOTICES.txt
+!licenses/
+!licenses/**
+!protocol/
+!protocol/backend.proto
+!hyperqwen_backend/
+!hyperqwen_backend/*.py
+!packaging/
+!packaging/package.py
+!packaging/toolchain.py
+!packaging/run.sh
+# Directory exceptions can admit descendants; explicitly reject generated code.
+**/__pycache__/
+**/*.py[cod]
