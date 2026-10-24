@@ -6,7 +6,7 @@ PACKAGE ?= build/package
 DOCKER_BUILD_FLAGS ?= --builder default
 CONTROLLER ?= build/controller/local-ai-v4.12.1-linux-amd64
 
-.PHONY: setup protocol test lint-workflows package extract smoke controller-test controller-package-test
+.PHONY: setup protocol test lint-workflows package extract smoke fetch-controller controller-test controller-package-test
 
 setup:
 	$(PYTHON) -m venv .venv
@@ -29,6 +29,9 @@ extract:
 
 smoke:
 	sh packaging/smoke.sh "$(PACKAGE)"
+
+fetch-controller:
+	$(PYTHON) -m tests.fetch_controller "$(CONTROLLER)"
 
 controller-test: protocol
 	$(PY) -m tests.controller_smoke "$(CONTROLLER)"

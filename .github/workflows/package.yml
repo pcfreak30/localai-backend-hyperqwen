@@ -1,0 +1,120 @@
+name: Build runtime
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Push and sign the tested image in GHCR
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: hyperqwen-package
+  cancel-in-progress: false
+jobs:
+  package:
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 180
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    env:
+      IMAGE: localai-backend-hyperqwen:ci-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Free unused hosted-runner SDKs and check space
+        run: |
+          test "$RUNNER_ENVIRONMENT" = github-hosted
+          df -h "$PWD"
+          sudo rm -rf -- /usr/local/lib/android /usr/share/dotnet /usr/local/.ghcup /opt/ghc /opt/hostedtoolcache/CodeQL
+          docker_root=$(docker info --format '{{.DockerRootDir}}')
+          python3 - "$PWD" "$docker_root" <<'PY'
+          import shutil, sys
+          for path in sys.argv[1:]:
+              free = shutil.disk_usage(path).free
+              print(f'{path}: {free / 1024**3:.1f} GiB free after SDK cleanup', flush=True)
+              if free < 45 * 1024**3:
+                  raise SystemExit('Need 45 GiB free for this build; no paid or self-hosted runner is selected automatically')
+          PY
+          docker buildx version
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+      - name: Check source and controller integration
+        run: |
+          make setup
+          make test
+          make fetch-controller
+          make controller-test
+      - name: Create a builder for this job
+        run: |
+          builder="hyperqwen-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          docker buildx create --name "$builder" --driver docker-container
+          printf 'BUILDER=%s\n' "$builder" >> "$GITHUB_ENV"
+      - name: Build image
+        run: |
+          make package DOCKER_BUILD_FLAGS="--builder $BUILDER --load"
+          df -h "$PWD"
+      - name: Remove this job's builder cache before extraction
+        run: |
+          docker buildx rm "$BUILDER"
+          df -h "$PWD"
+      - name: Check the extracted package
+        run: |
+          make extract
+          docker pull ubuntu:24.04
+          make smoke
+          make controller-package-test
+          df -h "$PWD"
+      - name: Check image source and record local image ID
+        run: |
+          image_id=$(docker image inspect "$IMAGE" --format '{{.Id}}')
+          revision=$(docker image inspect "$IMAGE" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')
+          test "$revision" = "$GITHUB_SHA"
+          printf 'Source: %s\n\nLocal image: %s\n' "$revision" "$image_id" >> "$GITHUB_STEP_SUMMARY"
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        if: inputs.publish
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+        if: inputs.publish
+        with:
+          cosign-release: v2.6.5
+      - name: Push and sign the tested image
+        if: inputs.publish
+        run: |
+          repository="ghcr.io/${GITHUB_REPOSITORY,,}"
+          tag="$repository:sha-$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          docker tag "$IMAGE" "$tag"
+          docker push "$tag"
+          image=$(docker image inspect "$tag" | jq -er --arg repo "$repository" \
+            '[.[0].RepoDigests[] | select(startswith($repo + "@"))] | if length == 1 then .[0] else error("Expected one pushed digest") end')
+          digest=${image##*@}
+          [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
+          docker manifest inspect "$image" | jq -e 'has("manifests") | not'
+          identity="https://github.com/$GITHUB_REPOSITORY/.github/workflows/package.yml@$GITHUB_REF"
+          cosign sign --yes --annotations "source_commit=$GITHUB_SHA" "$image"
+          cosign verify --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity "$identity" --annotations "source_commit=$GITHUB_SHA" --output json "$image" > build/candidate-signature.json
+          jq -n --arg image "$image" --arg source "$GITHUB_SHA" --arg identity "$identity" \
+            '{image: $image, source_commit: $source, signing_identity: $identity}' > build/candidate.json
+          printf '\nSigned test image: %s\n' "$image" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: inputs.publish
+        with:
+          name: hyperqwen-candidate
+          path: |
+            build/candidate.json
+            build/candidate-signature.json
+          if-no-files-found: error
+      - name: Remove the job builder if an earlier step failed
+        if: always()
+        run: |
+          if [ -n "${BUILDER:-}" ] && docker buildx inspect "$BUILDER" >/dev/null 2>&1; then
+            docker buildx rm "$BUILDER"
+          fi
