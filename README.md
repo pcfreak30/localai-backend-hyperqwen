@@ -1,15 +1,15 @@
 # LocalAI HyperQwen backend
 
-A thin LocalAI gRPC adapter supervising a native HyperQwen HTTP server. HQ owns inference, launch profiles and startup tuning; the adapter handles request translation and process lifecycle. It does not modify LocalAI's stock backends or import native ML frameworks.
+Run HyperQwen models through LocalAI. A Python service accepts LocalAI's gRPC requests, starts HyperQwen and sends generation requests to its HTTP API. HyperQwen runs the model and controls its startup settings. LocalAI's stock backends are unchanged.
 
 ## Requirements
 
-- Linux amd64. The extracted package targets Ubuntu 24.04/glibc 2.39-compatible hosts/containers with `/bin/sh`, bash and coreutils; it bundles Python and its runtime/compiler dependencies.
-- Python 3.12 for source development, or Docker to build/extract the package.
-- A supported NVIDIA GPU/driver for inference. Source development needs an existing HQ runtime matching `runtime.lock.json`; the standalone package bundles that pinned runtime.
-- An existing prepared checkpoint directory. No model downloads, conversion, quantization or model-repository script execution are performed by this adapter.
+- Linux amd64. The package needs Ubuntu 24.04 or a host/container with compatible glibc 2.39, `/bin/sh`, bash and coreutils.
+- Python 3.12 for source development, or Docker to build and extract the package. The package includes Python.
+- A supported NVIDIA GPU and driver to run a model. Source development needs an installed HQ runtime matching `runtime.lock.json`; the package includes that runtime.
+- An existing model directory prepared for HyperQwen. The adapter does not download, convert or quantize weights, or run scripts from model repositories.
 
-The metadata preflight accepts indexed compressed-tensors pack-quantized int4/int8 checkpoints declaring the supported Qwen3.5/3.8 architecture family, with tokenizer/template and selected speculation artifacts. It checks bounded metadata and file presence, not tensor contents; native HQ remains authoritative for actual model/hardware compatibility.
+Before starting HQ, the adapter checks the model configuration, tokenizer files and shard index. It accepts indexed compressed-tensors pack-quantized int4/int8 models in the Qwen3.5/3.8 family. It also checks the extra files used by multi-token prediction (MTP) when enabled. It does not read tensor contents; HQ loads the weights and reports model or hardware errors.
 
 ## Development
 
@@ -18,77 +18,95 @@ make setup
 make test
 ```
 
-Dependencies are hash-locked for Linux amd64 / CPython 3.12. Protocol bindings are generated from the pinned `protocol/backend.proto`, not committed. CPU tests need no Docker, GPU, controller executable or weights: a small synthetic HTTP fixture covers lifecycle and generation, and real subprocess tests cover parent crashes and TERM-resistant workers.
+Python dependencies have fixed versions and SHA256 hashes for Linux amd64 / CPython 3.12. `make test` generates protocol bindings from `protocol/backend.proto`; generated files are ignored by Git. Tests use a fake HTTP server and placeholder model metadata. They need no Docker, GPU, LocalAI executable or weights. Subprocess tests check worker cleanup after parent crashes, including workers that ignore TERM.
 
-Workflow checks use `make lint-workflows` with actionlint 1.7.12 and ShellCheck on PATH. GitHub-hosted CPU CI fetches the checksum-pinned linter into temporary storage and runs the same tests; no image builds or model downloads occur in ordinary CI.
+Run `make lint-workflows` with actionlint 1.7.12 and ShellCheck on PATH to check the GitHub workflows. CPU CI downloads the linter, verifies its SHA256 and runs the same tests. It does not build images or download models.
 
-## Standalone runtime package
+## Build the runtime package
 
-The OCI image is an **extractable executable package**, not a runnable server container or full root filesystem. LocalAI executes its top-level `run.sh`. No nested Docker, model weights or development probes are shipped.
+The OCI image contains files for LocalAI to extract and execute. LocalAI runs its top-level `run.sh`. The image has no operating system and cannot run as a server container. It contains no weights or development test scripts.
 
 ```sh
-make package                    # local image: localai-backend-hyperqwen:develop
-make extract                    # fresh directory: build/package
-make smoke                      # checks the existing extraction; never re-extracts
+make package                    # image: localai-backend-hyperqwen:develop
+make extract                    # new directory: build/package
+make smoke                      # check that extraction
 ```
 
-The build reuses the digest-pinned HQ stack without reinstalling its ML dependencies. It relocates Python/native libraries, CUDA, GCC/binutils/sysroot and Python headers needed for native JIT. Adapter dependencies stay separate from HQ's Python environment. `runtime.lock.json` and `requirements.lock` are retained in the package.
+The build uses the HQ image recorded in `runtime.lock.json` without reinstalling its ML dependencies. It copies Python, shared libraries, CUDA and the GCC/binutils headers and tools needed to compile kernels. Adapter dependencies stay separate from HQ's Python packages. Both lock files are included in the package.
 
-Check workspace and Docker storage before building: the runtime is roughly 10 GB, and build layers plus extraction require substantially more. There is no automatic pruning. Use `IMAGE`/`PACKAGE` to retain multiple candidates; extraction refuses any existing destination. `DOCKER_BUILD_FLAGS='--builder default --network=host'` is available if Docker bridge networking fails.
+Check free space in the workspace and Docker storage before building. Allow room for build copies as well as the image and extraction. The commands do not prune anything. Override `IMAGE` and `PACKAGE` to keep separate builds; extraction refuses an existing destination. If Docker bridge networking fails, use `DOCKER_BUILD_FLAGS='--builder default --network=host'`.
 
-`make smoke` requires a pre-existing `ubuntu:24.04` image. It uses no network or GPU, mounts the package/root read-only and supplies writable temporary cache space. It verifies imports, gRPC health/load rejection/free/shutdown, native dependency isolation, both native launcher dry-runs and C++/Python-extension/CUDA compilation without a host compiler. Compiler success is not GPU kernel execution or model acceptance.
+`make smoke` needs an existing `ubuntu:24.04` image. It runs with networking disabled, no GPU, a read-only root/package and writable temporary cache space. It checks imports, gRPC startup/shutdown, failed model loading, HQ's own dependency versions and launcher dry-runs. It also compiles C++, a Python extension and CUDA using the bundled compiler. These checks do not execute a GPU kernel or load real weights.
 
-For controller integration, provide the executable pinned in `runtime.lock.json`:
+To test with LocalAI, provide the executable version recorded in `runtime.lock.json`:
 
 ```sh
 make controller-test CONTROLLER=/absolute/path/to/local-ai
 make controller-package-test CONTROLLER=/absolute/path/to/local-ai
 ```
 
-These checks verify the controller checksum before starting an isolated loopback instance with synthetic checkpoint/HTTP fixtures and galleries/P2P disabled. They do not download the controller or weights, allocate a GPU, or touch an existing LocalAI service. Logs stay under ignored `build/`; package checks do not write interpreter caches into the extraction.
+These commands verify its checksum, then start a separate LocalAI instance on a loopback port with fake model files and a fake HQ server. Galleries and P2P are disabled. They do not download files, use a GPU or restart an existing service. Logs stay in ignored `build/`. The checks do not write Python bytecode into the package.
 
-Register the **entire extracted package** as a trusted LocalAI-managed executable, using this LocalAI option:
+Register the extracted package with this LocalAI option:
 
 ```sh
 --external-grpc-backends "hyperqwen:/absolute/path/to/package/run.sh"
 ```
 
-This is a local executable path, not a remote gRPC endpoint. LocalAI starts it and applies model YAML env. Alternatively install the entire package at the configured backends path as `hyperqwen/run.sh` and its sibling runtime directories. Do not copy or symlink only the script: dependencies are relative to the package root.
+LocalAI starts that executable and supplies the model YAML's environment settings. You can also place the entire package under the configured backends directory as `hyperqwen/run.sh` and its sibling directories. Copying or symlinking only the script will fail because it looks for dependencies beside it.
 
-Select an approved idle GPU explicitly in the controller environment; do not default to an occupied GPU. Keep package/weights read-only where practical and provide writable HOME/cache/temp paths. Use an isolated workspace/unused API port for tests; configure LocalAI authentication/TLS separately before public exposure. The Make targets do not publish images or modify stock LocalAI backends.
+Select an idle GPU in the controller's environment. Keep the package and weights read-only where possible, with writable HOME/cache/temp directories. For tests, use separate workspace directories and an unused API port. Configure LocalAI authentication and TLS before exposing its API publicly. The Make commands do not publish images.
 
-## Start the source adapter
+## Run from source
 
-With native HQ already installed:
+With HQ already installed:
 
 ```sh
 HQ_ROOT=/absolute/path/to/hyperqwen \
   .venv/bin/python -m hyperqwen_backend.server --addr 127.0.0.1:50051
 ```
 
-The gRPC endpoint is intended for a trusted LocalAI controller, not direct public exposure. Loading a model starts the selected native HQ launcher. Its HTTP service uses authenticated loopback readiness and a fixed internal served-model name. Controller-managed deployments should supply startup environment to the backend process; this source command starts a standalone development instance.
+Keep this gRPC port private to LocalAI. A model load starts the selected HQ launcher. HQ's HTTP server listens on loopback with a generated API key; the adapter waits for the expected model before accepting generation requests. Set startup environment variables before starting this development command. A LocalAI-managed executable receives them from model YAML.
 
-Use prepared model directories beneath LocalAI's configured models root when supplying relative model paths. Directory escapes are rejected. Keep weights read-only and provide writable HOME/cache/temp locations for native HQ/JIT. Stop the adapter gracefully to unload; its guardian also cleans up owned native workers if the adapter is killed, and controller-parent monitoring handles abrupt controller exit. Workers deliberately escaping the owned group or simultaneous guardian failure are not covered.
+Relative model paths must stay beneath LocalAI's models root. Stop the adapter normally to unload the model. A separate guardian process stops its HQ workers if the adapter dies, and the adapter stops when its controller parent exits. This does not cover workers that leave the owned process group or a simultaneous guardian failure.
 
 ## Configuration
 
-HQ startup settings pass through the backend process environment without a parallel configuration resolver:
+HQ reads startup settings from the backend process environment:
 
-- `HQ_ROOT`: trusted path to the installed HQ runtime (default `/app`).
+- `HQ_ROOT`: installed HQ directory, default `/app`.
 - `HQ_PROFILE`: `single` (default) or `batch`.
-- Native knobs such as SPEC, MAX_LEN, MAX_SEQS, GPU_UTIL and INT8_ACT remain HQ-owned. Explicit empty values are preserved; unset and empty are not interchangeable.
-- `HQ_STARTUP_TIMEOUT` and `HQ_REQUEST_TIMEOUT`: finite positive seconds, default 600. HTTP request timeout is inactivity, not a total generation deadline.
-- `HQ_GRPC_MAX_MESSAGE_MB`: integer 1–512, default 50.
+- `SPEC`, `MAX_LEN`, `MAX_SEQS`, `GPU_UTIL`, `INT8_ACT` and other HQ settings pass through unchanged. Empty and unset values stay distinct.
+- `HQ_STARTUP_TIMEOUT` and `HQ_REQUEST_TIMEOUT`: finite positive seconds, default 600. The HTTP timeout limits inactivity, not total generation time.
+- `HQ_GRPC_MAX_MESSAGE_MB`: integer from 1 to 512, default 50.
 
-The adapter reserves host, port, API authentication and internal model identity. EXTRA_ARGS cannot override those settings. Use HQ startup env rather than conflicting typed load settings or generic engine_args/options. Per-request sampling is translated separately.
+The adapter sets the host, port, API key and internal model name. EXTRA_ARGS cannot override them. Configure startup through HQ environment variables rather than typed load settings or generic engine_args/options. Sampling settings come from each generation request.
 
-For structured chat/tools, LocalAI model configuration should use `template.use_tokenizer_template: true` so structured messages reach the native tokenizer template rather than being flattened into a rendered prompt.
+Set `template.use_tokenizer_template: true` in LocalAI model YAML for chat and tools. This keeps messages structured so HQ's tokenizer template can handle them.
 
-## Capabilities and limits
+## Swift profiles and model gallery
 
-- Normal/streaming text and chat, reasoning, tools/continuation, sampling, usage and logprobs where supported by the protocol/frontend.
-- Concurrent requests, upstream cancellation, load/unload/retry and explicit error handling.
-- The pinned LocalAI legacy HTTP completion frontend drops usage/logprobs even when the adapter returns them. No controller workaround is included.
-- No embeddings, multimodal or tokenization endpoints, automatic checkpoint preparation or blanket support for every HQ mode/hardware combination.
+Use these examples with `Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen` on one RTX 3090. Run one profile per GPU.
 
-The protocol and tested controller pins are recorded separately in `runtime.lock.json`. CPU fixtures establish adapter behavior; they are not model quality/performance or GPU acceptance tests.
+| Example | Settings | Context and requests |
+|---|---|---|
+| `examples/swift-3090-graphs.yaml` | MTP with two draft tokens and CUDA graphs | 4,096 tokens, two requests at once |
+| `examples/swift-3090-batch.yaml` | Batch without CUDA graphs or int8 activations | 4,096 tokens, two requests at once |
+
+With existing weights, copy the chosen YAML into LocalAI's models root and set `parameters.model` to the model directory's relative name. Select an idle GPU and provide writable cache/temp directories. Stop the loaded profile and check GPU memory has returned before switching. The batch example omits SPEC/CTX because HQ ignores them in batch mode. These examples do not establish support for larger batches, longer contexts, int8 activations or other GPUs.
+
+`gallery/models.yaml` contains the same two profiles in JSON, which is valid YAML. Both use the same model directory under `hyperqwen/`. Their 25 files include eight weight shards, downloaded from upstream commit `2e6ad7769c0273e95813090acd147ca9a70c686f` with the publisher's SHA256 checksums. Tests read this list without fetching the files.
+
+To add the model gallery to LocalAI, use this repository's raw `gallery/models.yaml` URL at a chosen commit. Keep any other galleries already configured. Listing models does not download weights; installing a recipe downloads 16.9 GB from upstream. Use the existing-weights instructions if you do not want a download. The model names are `swift-hyperqwen-3090-graphs` and `swift-hyperqwen-3090-batch`.
+
+Install or register the HyperQwen backend first. `gallery/backends.yaml` is empty because no signed runtime image has been published. The model gallery cannot install the backend yet.
+
+## Supported requests
+
+- Text and chat, including streaming, reasoning, tools and tool replies.
+- Request sampling settings, token counts and token probabilities (`logprobs`) where LocalAI's API supports them.
+- Concurrent requests, cancellation and model load/unload/retry.
+
+The LocalAI version in `runtime.lock.json` drops usage/logprobs from its legacy HTTP completion responses even when the adapter returns them. The adapter does not change that frontend behavior.
+
+Embeddings, multimodal and tokenization endpoints are not implemented. CPU tests check the adapter with fake responses; they do not measure GPU performance or answer quality.
