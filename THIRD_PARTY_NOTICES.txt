@@ -1,0 +1,13 @@
+Third-party notices
+
+The adapter is MIT licensed; see LICENSE. Bundled components retain their own licenses.
+
+LocalAI: protocol/backend.proto is pinned in runtime.lock.json. Its license is retained in licenses/LocalAI.LICENSE.
+
+HyperQwen: the source revision and CI image digest are pinned in runtime.lock.json. Its license is retained in licenses/HyperQwen.LICENSE and the packaged HQ source directory.
+
+GCC, binutils, the development sysroot and compiler dependencies retain available distribution copyright notices under licenses/toolchain in built packages.
+
+CUDA/cuRAND package notices are retained under licenses/cuda. Python, Torch, vLLM, shared libraries and Python dependencies retain their accompanying license metadata/notices.
+
+No model weights are included in the package.
