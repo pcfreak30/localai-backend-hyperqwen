@@ -1,0 +1,12 @@
+.venv/
+build/
+.cache/
+__pycache__/
+*.py[cod]
+backend_pb2.py
+backend_pb2_grpc.py
+
+# Local plans and agent state stay out of product PRs.
+*.md
+!README.md
+!AGENTS.md
