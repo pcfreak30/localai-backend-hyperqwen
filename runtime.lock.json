@@ -1,0 +1,13 @@
+{
+  "localai_commit": "4449adb3957b05d997555d4e0595372e63a8200a",
+  "hyperqwen_commit": "ce9615c4f2309be727407918a6c979bd67968069",
+  "hyperqwen_image": "ghcr.io/syv-ai/hyperqwen@sha256:0acd4b9625473e51c9bab56406c30814bc0d0d7e0a38deb408c62664b5a77669",
+  "platform": "linux/amd64",
+  "tested_controller": {
+    "version": "v4.12.1",
+    "commit": "ec9274027eadd552d56f2c6c1fe86cd9216a991a",
+    "asset": "local-ai-v4.12.1-linux-amd64",
+    "sha256": "a469b524a8451ca363c4692bd842e0913003fc69fefb01f63ca8df14691e6298",
+    "protocol_sha256": "3f02500c3b706e8db2d32d3d7eb3b95e1206d3c9d049f74d0ff51c7526913386"
+  }
+}
