@@ -1,0 +1,68 @@
+name: Approve runtime for the backend gallery
+on:
+  workflow_dispatch:
+    inputs:
+      digest:
+        description: SHA256 digest from a signed GHCR test image
+        required: true
+        type: string
+      gpu_reviewed:
+        description: I tested this image on the intended GPU and reviewed its results
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: hyperqwen-release
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.ref == 'refs/heads/develop'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    environment: release
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    env:
+      DIGEST: ${{ inputs.digest }}
+      GPU_REVIEWED: ${{ inputs.gpu_reviewed }}
+    steps:
+      - name: Require a reviewed image digest
+        run: |
+          test "$GPU_REVIEWED" = true
+          [[ "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]
+          image="ghcr.io/${GITHUB_REPOSITORY,,}@$DIGEST"
+          printf 'IMAGE_REF=%s\n' "$image" >> "$GITHUB_ENV"
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3
+        with:
+          cosign-release: v2.6.5
+      - name: Verify the build signature and add the release signature
+        run: |
+          mkdir -p build/release
+          build_identity="https://github.com/$GITHUB_REPOSITORY/.github/workflows/package.yml@refs/heads/develop"
+          cosign verify --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity "$build_identity" --output json "$IMAGE_REF" > build/release/build-signature.json
+          source=$(jq -er '.[0].optional.source_commit | select(type == "string") | select(test("^[0-9a-f]{40}$"))' build/release/build-signature.json)
+          identity="https://github.com/$GITHUB_REPOSITORY/.github/workflows/release.yml@$GITHUB_REF"
+          cosign sign --yes --annotations "source_commit=$source" "$IMAGE_REF"
+          cosign verify --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity "$identity" --annotations "source_commit=$source" --output json "$IMAGE_REF" > build/release/release-signature.json
+          jq -n --arg image "$IMAGE_REF" '[{name: "hyperqwen", uri: ("oci://" + $image)}]' > build/release/backends.yaml
+          jq -n --arg identity "$identity" \
+            '{issuer: "https://token.actions.githubusercontent.com", identity: $identity}' > build/release/verification.json
+          jq -n --arg image "$IMAGE_REF" --arg source "$source" --arg release "$GITHUB_SHA" \
+            '{image: $image, source_commit: $source, release_workflow_commit: $release}' > build/release/image.json
+          printf 'Approved image: %s\n\nBuilt from: %s\n' "$IMAGE_REF" "$source" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: hyperqwen-release
+          path: build/release/
+          if-no-files-found: error

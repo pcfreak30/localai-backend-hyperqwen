@@ -38,7 +38,9 @@ Check free space in the workspace and Docker storage before building. Allow room
 
 `make smoke` needs an existing `ubuntu:24.04` image. It runs with networking disabled, no GPU, a read-only root/package and writable temporary cache space. It checks imports, gRPC startup/shutdown, failed model loading, HQ's own dependency versions and launcher dry-runs. It also compiles C++, a Python extension and CUDA using the bundled compiler. These checks do not execute a GPU kernel or load real weights.
 
-To test with LocalAI, provide the executable version recorded in `runtime.lock.json`:
+To download the LocalAI test executable, run `make fetch-controller`. It checks the SHA256 recorded in `runtime.lock.json` before installing it under `build/controller/`, or reuses a matching executable already there. It refuses to overwrite an existing file with the wrong hash.
+
+You can also provide an existing executable:
 
 ```sh
 make controller-test CONTROLLER=/absolute/path/to/local-ai
@@ -100,6 +102,47 @@ With existing weights, copy the chosen YAML into LocalAI's models root and set `
 To add the model gallery to LocalAI, use this repository's raw `gallery/models.yaml` URL at a chosen commit. Keep any other galleries already configured. Listing models does not download weights; installing a recipe downloads 16.9 GB from upstream. Use the existing-weights instructions if you do not want a download. The model names are `swift-hyperqwen-3090-graphs` and `swift-hyperqwen-3090-batch`.
 
 Install or register the HyperQwen backend first. `gallery/backends.yaml` is empty because no signed runtime image has been published. The model gallery cannot install the backend yet.
+
+## Build and publish through GitHub
+
+Large builds run only when requested. Pull requests continue to run CPU tests without building or publishing an image. No self-hosted runner is needed.
+
+After the workflows are on `develop`, start a package build with `gh`:
+
+```sh
+gh workflow run package.yml --ref develop -f publish=false
+gh run list --workflow package.yml
+gh run watch RUN_ID
+```
+
+The job uses an Ubuntu 24.04 GitHub-hosted runner. It removes preinstalled Android, .NET, Haskell and CodeQL tools, then checks workspace and Docker storage. It requires 45 GiB free after that cleanup. The job stops if space is insufficient; it does not select a paid runner or register a self-hosted runner. Disk usage is printed after each large step. Its builder cache is removed before extraction to avoid keeping another runtime copy.
+
+To push and sign an image after the package checks pass:
+
+```sh
+gh workflow run package.yml --ref develop -f publish=true
+gh run watch RUN_ID
+gh run download RUN_ID -n hyperqwen-candidate -D build/candidate
+```
+
+This publishes a test image in `ghcr.io/pcfreak30/localai-backend-hyperqwen`. Each run gets its own tag. The downloaded `candidate.json` records the image digest, source commit and signing identity. The signature also records the source commit. Registry login uses GitHub's job token; signing uses GitHub OIDC and Cosign 2.6.5. No personal token or signing key is required. New GHCR packages may need their visibility changed before anonymous users can install them.
+
+Test that exact image digest with existing read-only weights on the intended GPU before approving it for the backend gallery. Check generation, streaming, tools, cancellation and worker cleanup, and check that GPU memory returns after shutdown. The build job's CPU checks do not perform those tests.
+
+After reviewing the GPU results:
+
+```sh
+gh workflow run release.yml --ref develop \
+  -f digest=sha256:IMAGE_DIGEST -f gpu_reviewed=true
+gh run watch RELEASE_RUN_ID
+gh run download RELEASE_RUN_ID -n hyperqwen-release -D build/release
+```
+
+Replace the run IDs and image digest with the actual values. The release job checks the build workflow's signature, signs the same digest under the release workflow's identity and creates backend-gallery files. It does not download image layers, rebuild, deploy or commit anything. The `gpu_reviewed` input is your acknowledgement, not an automated GPU check. Configure reviewers on GitHub's `release` environment if release approval should require another person.
+
+Review the generated `backends.yaml` and `verification.json` before adding the backend entry and trusted signing policy to LocalAI. The trusted release identity is `https://github.com/pcfreak30/localai-backend-hyperqwen/.github/workflows/release.yml@refs/heads/develop`, with issuer `https://token.actions.githubusercontent.com`. The build workflow signs test images under `package.yml`; the backend gallery should trust the release identity.
+
+Neither workflow updates this repository's gallery or opens a PR. Check that intended users can pull and verify the signed image before adding it to the backend gallery. Keep the previous signed image digest and gallery commit for rollback; do not rebuild an old release to roll back.
 
 ## Supported requests
 
