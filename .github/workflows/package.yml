@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   package:
-    if: github.ref == 'refs/heads/develop'
+    if: github.ref == 'refs/heads/develop' || !inputs.publish
     runs-on: ubuntu-24.04
     timeout-minutes: 180
     permissions:

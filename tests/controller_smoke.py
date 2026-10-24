@@ -17,6 +17,13 @@ from urllib.request import Request, ProxyHandler, build_opener
 from tests.checkpoint_fixture import create_checkpoint
 
 
+def fixture_python(package):
+    """Match the interpreter to the PYTHONHOME set by the package launcher."""
+    if package:
+        return str(Path(package).resolve() / 'python/bin/python3.12')
+    return sys.executable
+
+
 def main(binary, package=None):
     root = Path(__file__).resolve().parents[1]
     binary = Path(binary).resolve()
@@ -35,7 +42,7 @@ def main(binary, package=None):
         create_checkpoint(model)
         launcher = work / 'hq/single-user/start_qwen.sh'
         launcher.parent.mkdir(parents=True)
-        launcher.write_text(f'exec {shlex.quote(sys.executable)} {shlex.quote(str(root / "tests/fake_hq.py"))}\n')
+        launcher.write_text(f'exec {shlex.quote(fixture_python(package))} {shlex.quote(str(root / "tests/fake_hq.py"))}\n')
         wrapper = work / 'backends/hyperqwen/run.sh'
         wrapper.parent.mkdir(parents=True)
         if package:
@@ -56,14 +63,13 @@ def main(binary, package=None):
             sock.bind(('127.0.0.1', 0))
             port = sock.getsockname()[1]
         env = {key: value for key, value in os.environ.items() if not key.startswith(('LOCALAI_', 'P2P'))}
-        # Keep checks from adding bytecode to an otherwise pristine extraction.
+        # Bytecode files would change the extraction used for later checks.
         env.update(PYTHONDONTWRITEBYTECODE='1', LOCALAI_GALLERIES='[]', LOCALAI_BACKEND_GALLERIES='[]',
-                   LOCALAI_AUTOLOAD_BACKEND_GALLERIES='false', LOCALAI_AUTOLOAD_GALLERIES='false',
-                   LOCALAI_P2P='false', P2P='false', TOKEN='')
+                   LOCALAI_AUTOLOAD_BACKEND_GALLERIES='false', LOCALAI_AUTOLOAD_GALLERIES='false', TOKEN='')
         command = [str(binary), 'run', '--address', f'127.0.0.1:{port}',
                    '--models-path', str(models), '--backends-path', str(work / 'backends'),
                    '--backends-system-path', str(work / 'system-backends'), '--data-path', str(work / 'data'),
-                   '--localai-config-dir', str(work / 'configuration'), '--disable-web-ui', '--disable-mcp', '--p2p=false']
+                   '--localai-config-dir', str(work / 'configuration'), '--disable-web-ui', '--disable-mcp', '--p2p=false', '--p2p-token=']
         opener = build_opener(ProxyHandler({}))
 
         def request(path, payload=None):
@@ -105,7 +111,11 @@ def main(binary, package=None):
                 with request('/v1/chat/completions', payload) as response:
                     continuation = json.load(response)
                 assert continuation['choices'][0]['message']['content'] == 'tool acknowledged', continuation
-                print('LocalAI directory discovery -> YAML env -> gRPC -> chat/SSE/tools/reasoning/continuation OK')
+                print('LocalAI chat, streaming, tools, reasoning and tool replies passed')
+            except Exception:
+                log.flush()
+                print(log_path.read_text(), file=sys.stderr, flush=True)
+                raise
             finally:
                 try:
                     os.killpg(process.pid, signal.SIGTERM)
