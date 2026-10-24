@@ -1,0 +1,26 @@
+# Swift chat settings for an RTX 3090.
+# Use one profile per GPU to avoid loading the model twice.
+name: swift-hyperqwen-3090-graphs
+backend: hyperqwen
+parameters:
+  model: Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen
+  temperature: 0
+template:
+  use_tokenizer_template: true
+env:
+  HQ_PROFILE: "single"
+  SPEC: "mtp"
+  DRAFT_TOKENS: "2"
+  CTX: "fast"
+  MAX_LEN: "4096"
+  MAX_SEQS: "2"
+  GPU_UTIL: "0.88"
+  VISION: "0"
+  PTH_FA: "0"
+  FA2_FP8KV: "0"
+  PREFIX_CACHE: "1"
+  API_SERVERS: "1"
+  TOOLS: "1"
+  HQ_STARTUP_TIMEOUT: "900"
+  HQ_REQUEST_TIMEOUT: "900"
+  VLLM_OFFLOAD_KEEP_SHM: "1"
