@@ -50,10 +50,12 @@ class GalleryTests(unittest.TestCase):
             self.assertRegex(item['sha256'], r'^[0-9a-f]{64}$')
             self.assertEqual(item['uri'], UPSTREAM + item['filename'][len(MODEL) + 1:])
 
-    def test_backend_entries_cannot_advertise_mutable_tags(self):
+    def test_backend_entry_uses_an_image_digest(self):
         entries = json.loads((ROOT / 'gallery/backends.yaml').read_text())
-        self.assertLessEqual(len(entries), 1)
+        self.assertEqual(len(entries), 1)
         for entry in entries:
             self.assertEqual(entry['name'], 'hyperqwen')
+            self.assertIsInstance(entry['description'], str)
+            self.assertTrue(entry['description'])
             self.assertIsNotNone(re.fullmatch(
                 r'oci://ghcr\.io/pcfreak30/localai-backend-hyperqwen@sha256:[0-9a-f]{64}', entry['uri']))
