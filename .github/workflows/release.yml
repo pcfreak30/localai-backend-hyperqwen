@@ -28,6 +28,7 @@ jobs:
     env:
       DIGEST: ${{ inputs.digest }}
       GPU_REVIEWED: ${{ inputs.gpu_reviewed }}
+      COSIGN_EXPERIMENTAL: '1'
     steps:
       - name: Require a reviewed image digest
         run: |
@@ -47,7 +48,7 @@ jobs:
         run: |
           mkdir -p build/release
           build_identity="https://github.com/$GITHUB_REPOSITORY/.github/workflows/package.yml@refs/heads/develop"
-          cosign verify --new-bundle-format --registry-referrers-mode=oci-1-1 \
+          cosign verify --new-bundle-format \
             --certificate-oidc-issuer https://token.actions.githubusercontent.com \
             --certificate-identity "$build_identity" --output json "$IMAGE_REF" > build/release/build-signature.json
           source=$(docker buildx imagetools inspect "$IMAGE_REF" --format '{{json .Image.Config.Labels}}' | \

@@ -11,8 +11,17 @@ class SigningWorkflowTests(unittest.TestCase):
         self.assertIn('cosign sign --yes --new-bundle-format --registry-referrers-mode=oci-1-1', package)
         for name in ('package.yml', 'release.yml'):
             workflow = (ROOT / '.github/workflows' / name).read_text()
-            self.assertIn('cosign verify --new-bundle-format --registry-referrers-mode=oci-1-1', workflow)
+            self.assertIn('cosign verify --new-bundle-format', workflow)
+            self.assertNotIn('cosign verify --new-bundle-format --registry-referrers-mode', workflow)
             self.assertNotIn('--annotations', workflow)
+            self.assertIn("COSIGN_EXPERIMENTAL: '1'", workflow)
+
+    def test_signing_options_are_checked_before_the_image_build(self):
+        package = (ROOT / '.github/workflows/package.yml').read_text()
+        self.assertLess(package.index('name: Check signing options before building'),
+                        package.index('name: Build image'))
+        self.assertIn('cosign sign --yes --new-bundle-format --registry-referrers-mode=oci-1-1 --help', package)
+        self.assertIn('cosign verify --new-bundle-format --help', package)
 
     def test_approval_keeps_the_build_signature_and_reads_signed_image_labels(self):
         release = (ROOT / '.github/workflows/release.yml').read_text()
