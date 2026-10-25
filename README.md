@@ -104,24 +104,39 @@ Place the prepared helper's `config.json` and single `model.safetensors` file in
 
 The adapter checks the helper's DFlash2 architecture, metadata and nonempty payload file without opening tensors. Native HyperQwen still validates compatibility and loads the weights. There is no automatic download, conversion or execution of model-repository scripts. Batch mode does not use these helper settings. Leaving `DRAFT` unset preserves native helper discovery.
 
-Model-relative `DRAFT` requires a runtime built with this feature. Older images, including the `b1c22fdd995f` image, do not resolve helper paths this way. The existing gallery profiles and signed image are unchanged by this runtime addition.
+Model-relative `DRAFT` requires a runtime built with this feature. Older images, including the `b1c22fdd995f` image, do not resolve helper paths this way. Upgrade an existing backend installation before using a helper profile; installing a new model recipe is not a substitute for upgrading the runtime.
 
 ## Swift profiles and model gallery
 
-These four profiles use `Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen`. Choose by conversation length and how many conversations you want to serve at once, then choose GPUs separately.
+Choose one of four uses, with or without an additional helper model. All eight profiles use the same prepared Swift model. Choose GPUs separately.
 
-| Profile | Context limit per conversation | Conversations at once |
-|---|---|---|
-| Swift Chat (`swift-chat`) | 32,768 tokens | 1 |
-| Swift Long Conversations (`swift-long-conversations`) | 131,072 tokens | 1 |
-| Swift Multiple Conversations (`swift-multiple-conversations`) | 32,768 tokens | Up to 4 |
-| Swift Multiple Long Conversations (`swift-multiple-long-conversations`) | 131,072 tokens | Up to 4 |
+| Use | Without helper | With helper | Context limit | Conversations at once |
+|---|---|---|---|---|
+| Chat | `swift-chat` | `swift-chat-with-helper` | 32,768 tokens | 1 |
+| Long Conversations | `swift-long-conversations` | `swift-long-conversations-with-helper` | 131,072 tokens | 1 |
+| Multiple Conversations | `swift-multiple-conversations` | `swift-multiple-conversations-with-helper` | 32,768 tokens | Up to 4 |
+| Multiple Long Conversations | `swift-multiple-long-conversations` | `swift-multiple-long-conversations-with-helper` | 131,072 tokens | Up to 4 |
+
+The regular profiles use only Swift. The With Helper profiles add a separate 1.3 GB model to help generate replies. They need more GPU memory and are not always faster. In the configuration, these choices are `SPEC=mtp` and `SPEC=dflash2` respectively.
+
+Both choices use `HQ_PROFILE=single`, which supports several conversations as well as one. The previous Multiple Conversations presets used the native batch launcher; it ignores `SPEC` and cannot offer this choice. The four-conversation limit remains, with `--enforce-eager` preserved for those profiles.
 
 Limits include both input and replies. They are settings, not a promise that every GPU can hold that much. Conversations share available memory: four full-length inputs may not fit at once. Reduce `MAX_LEN` and `context_size` together, reduce `MAX_SEQS`, or share the model across more GPUs when memory is insufficient. These are experimental starting points, not quality or performance guarantees for every card.
 
 Matching YAML files are under `examples/`. With existing prepared weights, copy one into LocalAI's models root and set `parameters.model` to the model directory's relative name. Give LocalAI writable cache/temp directories. Install or register the HyperQwen backend first.
 
-The gallery uses one shared model directory under `hyperqwen/`. All four recipes list the same 25 files, including eight weight shards, at upstream commit `2e6ad7769c0273e95813090acd147ca9a70c686f`, with the publisher's SHA256 checksums. Listing recipes downloads no weights; installing a recipe downloads about 16.9 GB if the files are not already available. Tests check metadata without downloading those files.
+The gallery uses one shared model directory under `hyperqwen/`. All recipes share the same 25 target files, including eight weight shards, pinned at upstream commit `2e6ad7769c0273e95813090acd147ca9a70c686f`. Helper recipes add two files from `syvai/Qwen3.8-27B-DFlash2-W4A16` at commit `4d30ec736ffc6b8688dc2ae2b502d9b48bdec279`. Every download has a SHA256 checksum. Listing recipes downloads no weights. A fresh install needs about 16.9 GB without the helper or 18.1 GB with it; files already present and matching their hashes can be reused.
+
+The helper files are declared in the gallery's `files` list, so LocalAI downloads them during installation. Both gallery `files[].filename` and model-config `download_files[].filename` are relative to LocalAI's models root, not to `parameters.model`. The helper destinations therefore include the target directory:
+
+```text
+hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/dflash/config.json
+hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/dflash/model.safetensors
+```
+
+The model YAML uses only `DRAFT: "dflash"`; the adapter resolves that beneath the target model. No fixed `/models` path is needed. We do not also add `download_files`, which would duplicate responsibility in model-config preloading. With existing weights and a manually copied example, place the two prepared helper files in the actual target model's `dflash/` subdirectory. Gallery installation only reuses weights already at its declared paths with matching hashes; it does not search other model folders.
+
+Keep the full target-model path neutral: the pinned engine can override the regular mode when that path contains `dflash`, `dspark`, `eagle3` or `eagle-`. The gallery's Swift directory avoids those names. The helper itself belongs in its `dflash/` subdirectory.
 
 Register the raw `gallery/models.yaml` URL at a chosen commit, keeping any other galleries configured. The new names replace `swift-hyperqwen-3090-graphs` and `swift-hyperqwen-3090-batch`. Existing installed YAMLs are not renamed automatically. Update client model names when switching, and stop the old profile before loading its replacement on the same GPUs.
 
@@ -172,11 +187,19 @@ With that gallery configured:
 local-ai backends install hyperqwen@hyperqwen --require-backend-integrity
 ```
 
+If already installed, unload models using this backend before upgrading it, then reload them afterward:
+
+```sh
+local-ai backends upgrade hyperqwen --require-backend-integrity
+```
+
+Use the same configured backends path as your running instance. Installing a helper model recipe does not replace this upgrade step.
+
 The verification policy is required for signed OCI installs. Keep strict integrity enabled; a policy with the wrong signing identity must fail. No GitHub login is needed to download the public image.
 
 Set `TMPDIR` to an existing writable directory with room for the download and extraction. LocalAI stores compressed layers and a temporary tar there; a small `/tmp` can fill even when the backend directory has enough space. If GHCR returns an HTTP/2 `PROTOCOL_ERROR`, retry the install with `GODEBUG=http2client=0`. That changes the HTTP version without disabling signature checks.
 
-This installs the runtime only. Select an example above to use existing prepared weights, or install a model recipe when you intend to download its weights. Choose one of the four profiles above, then select GPUs for your deployment.
+This installs the runtime only. Select an example above to use existing prepared weights, or install a model recipe when you intend to download its weights. Choose a profile and helper option above, then select GPUs for your deployment.
 
 Keep the previous signed image digest and gallery commit for rollback. If an update fails, use that catalog revision and stop the affected LocalAI instance before replacing its backend.
 
