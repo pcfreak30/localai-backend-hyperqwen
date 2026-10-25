@@ -98,9 +98,10 @@ jobs:
           [[ "$digest" =~ ^sha256:[0-9a-f]{64}$ ]]
           docker manifest inspect "$image" | jq -e 'has("manifests") | not'
           identity="https://github.com/$GITHUB_REPOSITORY/.github/workflows/package.yml@$GITHUB_REF"
-          cosign sign --yes --annotations "source_commit=$GITHUB_SHA" "$image"
-          cosign verify --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            --certificate-identity "$identity" --annotations "source_commit=$GITHUB_SHA" --output json "$image" > build/candidate-signature.json
+          cosign sign --yes --new-bundle-format --registry-referrers-mode=oci-1-1 "$image"
+          cosign verify --new-bundle-format --registry-referrers-mode=oci-1-1 \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity "$identity" --output json "$image" > build/candidate-signature.json
           jq -n --arg image "$image" --arg source "$GITHUB_SHA" --arg identity "$identity" \
             '{image: $image, source_commit: $source, signing_identity: $identity}' > build/candidate.json
           printf '\nSigned test image: %s\n' "$image" >> "$GITHUB_STEP_SUMMARY"
