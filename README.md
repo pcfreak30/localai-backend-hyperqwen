@@ -142,9 +142,9 @@ Register the raw `gallery/models.yaml` URL at a chosen commit, keeping any other
 
 ### Choose GPUs for your deployment
 
-Published profiles contain no GPU IDs, device count or machine-specific paths. They use one GPU unless you configure otherwise. Select idle GPUs explicitly before loading a model; the backend does not find spare GPUs or balance requests across model copies.
+Published profiles contain no GPU IDs, device count or machine-specific paths. All eight profiles enable `HQ_GPU_SHARING: "auto"` and keep `HQ_CACHE_BUDGET: "native"`. They share all GPUs visible to the backend, including busy ones. Restrict container visibility or set `CUDA_VISIBLE_DEVICES` to the GPUs allocated to this deployment before loading. A single visible GPU stays a one-GPU deployment. The backend does not find spare GPUs or balance requests across model copies.
 
-**One model across several GPUs:** expose the chosen cards to LocalAI, then add `CUDA_VISIBLE_DEVICES` and a matching `--tensor-parallel-size` to the model YAML's `env`. For example, if you deliberately selected two visible cards:
+**One model across several GPUs:** expose only the chosen cards to LocalAI; gallery profiles detect the visible count automatically. You can instead set `CUDA_VISIBLE_DEVICES` and an explicit `--tensor-parallel-size` in the model YAML's `env`. For example, if you deliberately selected two visible cards:
 
 ```yaml
 env:
@@ -160,13 +160,13 @@ These are example device indices, not defaults to copy without checking your dep
 
 Selected cards must support the model's split and be able to communicate inside the container. Provide sufficient container shared memory. More cards do not guarantee faster replies, and not every card count or combination is supported. The adapter forwards this setting to HyperQwen; it does not implement its own GPU distribution.
 
-**Automatic sharing (requires a runtime containing this feature):** opt in with `HQ_GPU_SHARING: "auto"` in the model's `env`. The adapter counts CUDA devices visible to its native Python and adds the matching tensor-parallel setting. Container restrictions and `CUDA_VISIBLE_DEVICES` still apply. Explicit parallel settings in `EXTRA_ARGS` take precedence and skip detection. Detection failure or zero visible devices causes a configuration error, not a silent one-GPU fallback. The default, `HQ_GPU_SHARING: "off"`, leaves native behavior unchanged.
+**Automatic sharing:** gallery profiles opt in with `HQ_GPU_SHARING: "auto"` in the model's `env`. The adapter counts CUDA devices visible to its native Python and adds the matching tensor-parallel setting. Container restrictions and `CUDA_VISIBLE_DEVICES` still apply. Explicit parallel settings in `EXTRA_ARGS` take precedence and skip detection. Detection failure or zero visible devices causes a configuration error, not a silent one-GPU fallback. The adapter default, when no policy is specified, is `HQ_GPU_SHARING: "off"`. Set it explicitly to restore native behavior in a deployment copy; it does not override explicit parallel arguments.
 
 Visibility is not availability: automatic sharing uses every device exposed to the backend, including a busy one. Restrict visibility to devices allocated to this deployment first. It does not choose idle cards, route requests between model copies, guarantee a speedup or guarantee that arbitrary device counts and model dimensions are compatible. Native vLLM still validates the requested layout. Startup logs explain the selection; inspect vLLM's `tensor_parallel_size` and worker ranks to confirm it took effect.
 
 **Cache budgeting:** the pinned DFlash launcher normally sets a fixed cache budget for one GPU. With tensor parallelism greater than one, that launcher already skips its fixed budget when `KV_MEM` is unset and uses `GPU_UTIL` instead. To request utilization-based sizing independently, set `HQ_CACHE_BUDGET: "auto"`; the adapter supplies an empty `KV_MEM` only if it was unset. An explicit `KV_MEM`, including an empty value, always wins. The default `HQ_CACHE_BUDGET: "native"` preserves native policy. An explicit native cache-size command-line argument remains authoritative. Utilization-based allocation is per worker, is not a combined pool of all GPU memory and can need extra headroom for compilation and transient allocations.
 
-These opt-in policies require a new signed runtime; the previously published image does not implement them. They are not enabled in the gallery by this change, and automatic physical multi-GPU operation is not yet validated.
+Upgrade the backend before installing or copying these profiles. The earlier image `sha256:82c86cb8af995f79a58da57823ced4d82fbe4200c18afa6bf9daac3400b90e31` does not implement the adapter's automatic-sharing policy. Existing installed YAML files do not receive gallery setting changes automatically; update those deployment copies or reinstall their recipes. All eight profiles have passed automatic sharing on two selected GPUs; both inference methods have also passed with only one GPU exposed. These checks do not establish compatibility with arbitrary device counts or combinations, full-context quality or four simultaneous maximum-length conversations.
 
 **Separate model copies:** copy a profile with a distinct `name` for each copy, select a different GPU through each copy's `CUDA_VISIBLE_DEVICES`, and leave out `--tensor-parallel-size`. Each copy needs memory for the whole model. Clients or an external router choose which model name receives each request; this backend does not automatically balance them.
 
@@ -187,7 +187,7 @@ Add this object to LocalAI's backend-gallery JSON list, keeping any galleries al
 }
 ```
 
-LocalAI accepts this list through `LOCALAI_BACKEND_GALLERIES` or `--backend-galleries`. Replace `develop` in the catalog URL with a chosen commit SHA if you want the catalog to stay fixed. The catalog's image URL already uses a full SHA256 digest rather than a moving tag.
+LocalAI accepts this list through `LOCALAI_BACKEND_GALLERIES` or `--backend-galleries`. The gallery uses `oci://ghcr.io/pcfreak30/localai-backend-hyperqwen:latest`, moved only after release approval. LocalAI compares its resolved digest with the installed digest when checking for upgrades; it does not replace a loaded runtime automatically. Pinning the catalog URL to a commit fixes the metadata but does not freeze a moving image tag. For a fully fixed deployment or rollback, use a private catalog copy whose OCI URI contains the approved `@sha256:...` digest recorded in the release artifact.
 
 With that gallery configured:
 
@@ -250,7 +250,7 @@ Replace the run IDs and image digest with the actual values. The release job che
 
 Review the generated `backends.yaml` and `verification.json` before adding the backend entry and trusted signing policy to LocalAI. The trusted signing identity is `https://github.com/pcfreak30/localai-backend-hyperqwen/.github/workflows/package.yml@refs/heads/develop`, with issuer `https://token.actions.githubusercontent.com`. The gallery uses the build signature after GPU review. Approval does not add another signature because LocalAI 4.12.1 selects a bundle before checking the signing identity.
 
-Test builds never move `latest`; only the reviewed release job does. Its artifacts include a digest-pinned `backends.yaml` for reproducibility and rollback, plus `backends-latest.yaml` for a moving update channel. The checked-in gallery remains digest-pinned until the first promotion has succeeded and the tag has passed LocalAI's strict verifier. LocalAI can detect digest changes for either form when checking for backend upgrades; a moving tag avoids needing a gallery commit for each approved runtime. Updates still require a backend upgrade, not just a model recipe refresh.
+Test builds never move `latest`; only the reviewed release job does. Its artifacts include a digest-pinned `backends.yaml` for reproducibility and rollback, plus `backends-latest.yaml` for a moving update channel. The checked-in gallery uses the moving update channel. Only reviewed releases should be promoted; retain the digest-pinned artifact for fixed deployments and rollback. LocalAI can detect digest changes for either form when checking for backend upgrades; a moving tag avoids needing a gallery commit for each approved runtime. Updates still require a backend upgrade, not just a model recipe refresh.
 
 Neither workflow updates this repository's gallery or opens a PR. Check that intended users can pull and verify the signed image before adding it to the backend gallery. Keep the previous signed image digest and gallery commit for rollback; do not rebuild an old release to roll back.
 

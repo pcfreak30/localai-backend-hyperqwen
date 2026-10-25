@@ -1,7 +1,6 @@
 """Check committed gallery metadata without fetching model payloads."""
 import json
 from pathlib import Path, PurePosixPath
-import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -44,6 +43,10 @@ class GalleryTests(unittest.TestCase):
             # The old batch mode ignores SPEC. Both choices must use the single launcher.
             self.assertEqual(env['HQ_PROFILE'], 'single')
             self.assertEqual(env['CTX'], 'long')
+            self.assertEqual(env['HQ_GPU_SHARING'], 'auto')
+            self.assertEqual(env['HQ_CACHE_BUDGET'], 'native')
+            self.assertIn('Shares all exposed GPUs, including busy ones', item['description'])
+            self.assertIn('Upgrade the HyperQwen backend', item['description'])
             self.assertTrue(all(isinstance(value, str) for value in env.values()))
             if sequences == 4:
                 self.assertEqual(env['EXTRA_ARGS'], '--enforce-eager')
@@ -130,12 +133,15 @@ class GalleryTests(unittest.TestCase):
                 self.assertNotIn(path.suffix, ('.py', '.sh', '.patch', '.so'))
                 self.assertRegex(item['sha256'], r'^[0-9a-f]{64}$')
 
-    def test_backend_entry_uses_an_image_digest(self):
+    def test_backend_entry_uses_the_reviewed_update_channel(self):
         entries = json.loads((ROOT / 'gallery/backends.yaml').read_text())
         self.assertEqual(len(entries), 1)
         for entry in entries:
             self.assertEqual(entry['name'], 'hyperqwen')
             self.assertIsInstance(entry['description'], str)
             self.assertTrue(entry['description'])
-            self.assertIsNotNone(re.fullmatch(
-                r'oci://ghcr\.io/pcfreak30/localai-backend-hyperqwen@sha256:[0-9a-f]{64}', entry['uri']))
+            self.assertEqual(entry['uri'], 'oci://ghcr.io/pcfreak30/localai-backend-hyperqwen:latest')
+        release = (ROOT / '.github/workflows/release.yml').read_text()
+        self.assertLess(release.index('test "$GPU_REVIEWED" = true'),
+                        release.index('name: Promote the verified digest to latest'))
+        self.assertIn('test "$promoted" = "$DIGEST"', release)

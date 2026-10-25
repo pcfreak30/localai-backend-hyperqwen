@@ -2,7 +2,7 @@
   {
     "name": "swift-chat",
     "backend": "hyperqwen",
-    "description": "Chat with Swift, with up to 32,768 tokens per conversation, including replies. Uses only the Swift model. Requires the HyperQwen backend and enough GPU memory.",
+    "description": "Chat with Swift, with up to 32,768 tokens per conversation, including replies. Uses only the Swift model. Shares all exposed GPUs, including busy ones; restrict visibility to the GPUs allocated to this deployment. Upgrade the HyperQwen backend first and provide enough GPU memory.",
     "license": "Swift Open License v1.0 (commercial-use conditions); Apache-2.0 base",
     "urls": [
       "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/tree/2e6ad7769c0273e95813090acd147ca9a70c686f",
@@ -27,6 +27,8 @@
       },
       "env": {
         "HQ_PROFILE": "single",
+        "HQ_GPU_SHARING": "auto",
+        "HQ_CACHE_BUDGET": "native",
         "SPEC": "mtp",
         "DRAFT_TOKENS": "2",
         "CTX": "long",
@@ -173,7 +175,7 @@
   {
     "name": "swift-chat-with-helper",
     "backend": "hyperqwen",
-    "description": "Chat with Swift, with up to 32,768 tokens per conversation, including replies. Uses an additional 1.3 GB helper model and needs more GPU memory. Upgrade the HyperQwen backend before using this profile.",
+    "description": "Chat with Swift, with up to 32,768 tokens per conversation, including replies. Uses an additional 1.3 GB helper model and needs more GPU memory. Shares all exposed GPUs, including busy ones; restrict visibility to the GPUs allocated to this deployment. Upgrade the HyperQwen backend before using this profile.",
     "license": "Swift Open License v1.0 (commercial-use conditions); Apache-2.0 base",
     "urls": [
       "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/tree/2e6ad7769c0273e95813090acd147ca9a70c686f",
@@ -200,6 +202,8 @@
       },
       "env": {
         "HQ_PROFILE": "single",
+        "HQ_GPU_SHARING": "auto",
+        "HQ_CACHE_BUDGET": "native",
         "SPEC": "dflash2",
         "CTX": "long",
         "MAX_LEN": "32768",
@@ -360,7 +364,7 @@
   {
     "name": "swift-long-conversations",
     "backend": "hyperqwen",
-    "description": "Chat with Swift, with up to 131,072 tokens per conversation, including replies. Uses only the Swift model. Requires the HyperQwen backend and enough GPU memory.",
+    "description": "Chat with Swift, with up to 131,072 tokens per conversation, including replies. Uses only the Swift model. Shares all exposed GPUs, including busy ones; restrict visibility to the GPUs allocated to this deployment. Upgrade the HyperQwen backend first and provide enough GPU memory.",
     "license": "Swift Open License v1.0 (commercial-use conditions); Apache-2.0 base",
     "urls": [
       "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/tree/2e6ad7769c0273e95813090acd147ca9a70c686f",
@@ -385,6 +389,8 @@
       },
       "env": {
         "HQ_PROFILE": "single",
+        "HQ_GPU_SHARING": "auto",
+        "HQ_CACHE_BUDGET": "native",
         "SPEC": "mtp",
         "DRAFT_TOKENS": "2",
         "CTX": "long",
@@ -531,7 +537,7 @@
   {
     "name": "swift-long-conversations-with-helper",
     "backend": "hyperqwen",
-    "description": "Chat with Swift, with up to 131,072 tokens per conversation, including replies. Uses an additional 1.3 GB helper model and needs more GPU memory. Upgrade the HyperQwen backend before using this profile.",
+    "description": "Chat with Swift, with up to 131,072 tokens per conversation, including replies. Uses an additional 1.3 GB helper model and needs more GPU memory. Shares all exposed GPUs, including busy ones; restrict visibility to the GPUs allocated to this deployment. Upgrade the HyperQwen backend before using this profile.",
     "license": "Swift Open License v1.0 (commercial-use conditions); Apache-2.0 base",
     "urls": [
       "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/tree/2e6ad7769c0273e95813090acd147ca9a70c686f",
@@ -558,6 +564,8 @@
       },
       "env": {
         "HQ_PROFILE": "single",
+        "HQ_GPU_SHARING": "auto",
+        "HQ_CACHE_BUDGET": "native",
         "SPEC": "dflash2",
         "CTX": "long",
         "MAX_LEN": "131072",
@@ -718,7 +726,7 @@
   {
     "name": "swift-multiple-conversations",
     "backend": "hyperqwen",
-    "description": "Serve up to four conversations at once, with up to 32,768 tokens per conversation, including replies. Uses only the Swift model. Conversations share GPU memory. Requires the HyperQwen backend and enough GPU memory.",
+    "description": "Serve up to four conversations at once, with up to 32,768 tokens per conversation, including replies. Uses only the Swift model. Conversations share GPU memory. Shares all exposed GPUs, including busy ones; restrict visibility to the GPUs allocated to this deployment. Upgrade the HyperQwen backend first and provide enough GPU memory.",
     "license": "Swift Open License v1.0 (commercial-use conditions); Apache-2.0 base",
     "urls": [
       "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/tree/2e6ad7769c0273e95813090acd147ca9a70c686f",
@@ -753,6 +761,8 @@
         "HQ_STARTUP_TIMEOUT": "900",
         "HQ_REQUEST_TIMEOUT": "900",
         "VLLM_OFFLOAD_KEEP_SHM": "1",
+        "HQ_GPU_SHARING": "auto",
+        "HQ_CACHE_BUDGET": "native",
         "SPEC": "mtp",
         "DRAFT_TOKENS": "2",
         "CTX": "long"
@@ -890,7 +900,7 @@
   {
     "name": "swift-multiple-conversations-with-helper",
     "backend": "hyperqwen",
-    "description": "Serve up to four conversations at once, with up to 32,768 tokens per conversation, including replies. Uses an additional 1.3 GB helper model and needs more GPU memory. Conversations share GPU memory. Upgrade the HyperQwen backend before using this profile.",
+    "description": "Serve up to four conversations at once, with up to 32,768 tokens per conversation, including replies. Uses an additional 1.3 GB helper model and needs more GPU memory. Conversations share GPU memory. Shares all exposed GPUs, including busy ones; restrict visibility to the GPUs allocated to this deployment. Upgrade the HyperQwen backend before using this profile.",
     "license": "Swift Open License v1.0 (commercial-use conditions); Apache-2.0 base",
     "urls": [
       "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/tree/2e6ad7769c0273e95813090acd147ca9a70c686f",
@@ -927,6 +937,8 @@
         "HQ_STARTUP_TIMEOUT": "900",
         "HQ_REQUEST_TIMEOUT": "900",
         "VLLM_OFFLOAD_KEEP_SHM": "1",
+        "HQ_GPU_SHARING": "auto",
+        "HQ_CACHE_BUDGET": "native",
         "SPEC": "dflash2",
         "CTX": "long",
         "DRAFT": "dflash",
@@ -1078,7 +1090,7 @@
   {
     "name": "swift-multiple-long-conversations",
     "backend": "hyperqwen",
-    "description": "Serve up to four conversations at once, with up to 131,072 tokens per conversation, including replies. Uses only the Swift model. Conversations share GPU memory. Requires the HyperQwen backend and enough GPU memory.",
+    "description": "Serve up to four conversations at once, with up to 131,072 tokens per conversation, including replies. Uses only the Swift model. Conversations share GPU memory. Shares all exposed GPUs, including busy ones; restrict visibility to the GPUs allocated to this deployment. Upgrade the HyperQwen backend first and provide enough GPU memory.",
     "license": "Swift Open License v1.0 (commercial-use conditions); Apache-2.0 base",
     "urls": [
       "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/tree/2e6ad7769c0273e95813090acd147ca9a70c686f",
@@ -1113,6 +1125,8 @@
         "HQ_STARTUP_TIMEOUT": "900",
         "HQ_REQUEST_TIMEOUT": "900",
         "VLLM_OFFLOAD_KEEP_SHM": "1",
+        "HQ_GPU_SHARING": "auto",
+        "HQ_CACHE_BUDGET": "native",
         "SPEC": "mtp",
         "DRAFT_TOKENS": "2",
         "CTX": "long"
@@ -1250,7 +1264,7 @@
   {
     "name": "swift-multiple-long-conversations-with-helper",
     "backend": "hyperqwen",
-    "description": "Serve up to four conversations at once, with up to 131,072 tokens per conversation, including replies. Uses an additional 1.3 GB helper model and needs more GPU memory. Conversations share GPU memory. Upgrade the HyperQwen backend before using this profile.",
+    "description": "Serve up to four conversations at once, with up to 131,072 tokens per conversation, including replies. Uses an additional 1.3 GB helper model and needs more GPU memory. Conversations share GPU memory. Shares all exposed GPUs, including busy ones; restrict visibility to the GPUs allocated to this deployment. Upgrade the HyperQwen backend before using this profile.",
     "license": "Swift Open License v1.0 (commercial-use conditions); Apache-2.0 base",
     "urls": [
       "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/tree/2e6ad7769c0273e95813090acd147ca9a70c686f",
@@ -1287,6 +1301,8 @@
         "HQ_STARTUP_TIMEOUT": "900",
         "HQ_REQUEST_TIMEOUT": "900",
         "VLLM_OFFLOAD_KEEP_SHM": "1",
+        "HQ_GPU_SHARING": "auto",
+        "HQ_CACHE_BUDGET": "native",
         "SPEC": "dflash2",
         "CTX": "long",
         "DRAFT": "dflash",

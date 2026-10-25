@@ -9,6 +9,8 @@ template:
   use_tokenizer_template: true
 env:
   HQ_PROFILE: "single"
+  HQ_GPU_SHARING: "auto"
+  HQ_CACHE_BUDGET: "native"
   SPEC: "dflash2"
   DRAFT_METHOD: "dflash"
   DRAFT: "dflash"
