@@ -1,8 +1,8 @@
 [
   {
-    "name": "swift-hyperqwen-3090-graphs",
+    "name": "swift-chat",
     "backend": "hyperqwen",
-    "description": "Swift chat for one RTX 3090, with a 4,096-token context and two requests at once. Install the HyperQwen backend first. Use one profile per GPU.",
+    "description": "Chat with Swift, with up to 32,768 tokens per conversation, including replies. Requires the HyperQwen backend and enough GPU memory. Choose which GPUs to use in your deployment settings.",
     "license": "Swift Open License v1.0 (commercial-use conditions); Apache-2.0 base",
     "urls": [
       "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/tree/2e6ad7769c0273e95813090acd147ca9a70c686f",
@@ -12,13 +12,11 @@
       "hyperqwen",
       "qwen",
       "nvidia",
-      "rtx3090",
-      "graphs",
       "experimental"
     ],
     "size": "16863298968B",
     "config_file": {
-      "name": "swift-hyperqwen-3090-graphs",
+      "name": "swift-chat",
       "backend": "hyperqwen",
       "parameters": {
         "model": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen",
@@ -31,13 +29,10 @@
         "HQ_PROFILE": "single",
         "SPEC": "mtp",
         "DRAFT_TOKENS": "2",
-        "CTX": "fast",
-        "MAX_LEN": "4096",
-        "MAX_SEQS": "2",
-        "GPU_UTIL": "0.88",
+        "CTX": "long",
+        "MAX_LEN": "32768",
+        "MAX_SEQS": "1",
         "VISION": "0",
-        "PTH_FA": "0",
-        "FA2_FP8KV": "0",
         "PREFIX_CACHE": "1",
         "API_SERVERS": "1",
         "TOOLS": "1",
@@ -45,7 +40,7 @@
         "HQ_REQUEST_TIMEOUT": "900",
         "VLLM_OFFLOAD_KEEP_SHM": "1"
       },
-      "context_size": 4096
+      "context_size": 32768
     },
     "files": [
       {
@@ -176,9 +171,9 @@
     ]
   },
   {
-    "name": "swift-hyperqwen-3090-batch",
+    "name": "swift-long-conversations",
     "backend": "hyperqwen",
-    "description": "Swift's batch profile for one RTX 3090, with a 4,096-token context and two requests at once. Install the HyperQwen backend first. Use one profile per GPU.",
+    "description": "Chat with Swift, with up to 131,072 tokens per conversation, including replies. Requires the HyperQwen backend and enough GPU memory. Choose which GPUs to use in your deployment settings.",
     "license": "Swift Open License v1.0 (commercial-use conditions); Apache-2.0 base",
     "urls": [
       "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/tree/2e6ad7769c0273e95813090acd147ca9a70c686f",
@@ -188,13 +183,182 @@
       "hyperqwen",
       "qwen",
       "nvidia",
-      "rtx3090",
-      "batch",
       "experimental"
     ],
     "size": "16863298968B",
     "config_file": {
-      "name": "swift-hyperqwen-3090-batch",
+      "name": "swift-long-conversations",
+      "backend": "hyperqwen",
+      "parameters": {
+        "model": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen",
+        "temperature": 0
+      },
+      "template": {
+        "use_tokenizer_template": true
+      },
+      "env": {
+        "HQ_PROFILE": "single",
+        "SPEC": "mtp",
+        "DRAFT_TOKENS": "2",
+        "CTX": "long",
+        "MAX_LEN": "131072",
+        "MAX_SEQS": "1",
+        "VISION": "0",
+        "PREFIX_CACHE": "1",
+        "API_SERVERS": "1",
+        "TOOLS": "1",
+        "HQ_STARTUP_TIMEOUT": "900",
+        "HQ_REQUEST_TIMEOUT": "900",
+        "VLLM_OFFLOAD_KEEP_SHM": "1"
+      },
+      "context_size": 131072
+    },
+    "files": [
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/LICENSE",
+        "sha256": "1367057bf17041aa1d69286a1400be5f464d2f8b8f54f600088b209eac1850be",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/LICENSE"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/LICENSE-APACHE-2.0",
+        "sha256": "bbedc3fda3305820b977265f01b8619d87570a6739de3a5582c3464840f1e57a",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/LICENSE-APACHE-2.0"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/NOTICE",
+        "sha256": "3299c5e014d312e1db730cd933d51aece658b558bf3b686b018c3d38a3fdd040",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/NOTICE"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/QUANTIZATION_MANIFEST.json",
+        "sha256": "aa8bc9717b78918f446692e175051a4eb1e74c0656cda5f3d3e2f70c3a6806bc",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/QUANTIZATION_MANIFEST.json"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/README.md",
+        "sha256": "ddfb650e0b0a5a52d2f43e935008d7497b7e55bec0d0f10ffc93e905dd7d8b0e",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/README.md"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/RUNTIME.md",
+        "sha256": "4e887864e745d8c0c6517a96c2bd4e25c064eea7f7a150732aea96ebae86c215",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/RUNTIME.md"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/chat_template.jinja",
+        "sha256": "c3cf9e34abf4f9e36c2d72165aa9c132d3e2a725b6c2586aaa3a8af9d7a81041",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/chat_template.jinja"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/config.json",
+        "sha256": "7a6b1bbea65bf844cd3d824845dd54d57fe8c92d46249233e1347e90c9f41b3f",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/config.json"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/generation_config.json",
+        "sha256": "e70c136c1b78ddc1fb0905bac8e733a4dc448d4f852a5dd75143fffc70be550e",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/generation_config.json"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/merges.txt",
+        "sha256": "a9d356d7bdf1ef4949e3e748e95b8e10ad9d4e2e838eddc38a0a7b6b94d1db8d",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/merges.txt"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model-00001-of-00006.safetensors",
+        "sha256": "fb1fc665d7d4ba54c1f71ef905118367dcbdd657c959673ab9fca9892e415e49",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model-00001-of-00006.safetensors"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model-00002-of-00006.safetensors",
+        "sha256": "48ddebd951d8d8a9ecef51b1857403ca77e5ab2c63b2e7db4822e0908e2eeaac",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model-00002-of-00006.safetensors"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model-00003-of-00006.safetensors",
+        "sha256": "61bbd4ae1e4812f08aa8f903e9995746aea8c346a666b530d0a6774773350f1e",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model-00003-of-00006.safetensors"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model-00004-of-00006.safetensors",
+        "sha256": "0c7baff5aac711178c5ce841da1ebcbebf67bde21155e74f4adca5d4354c178a",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model-00004-of-00006.safetensors"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model-00005-of-00006.safetensors",
+        "sha256": "0cc1b9b1cde51d81fd7f53d91716399c30c4a5a166503dbd76ac65c63bb881c9",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model-00005-of-00006.safetensors"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model-00006-of-00006.safetensors",
+        "sha256": "65c1248e479775518d38a1675859380890a76c455f25de37b613bef71281a4fb",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model-00006-of-00006.safetensors"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model-mtp-bf16.safetensors",
+        "sha256": "9710e90c273e7cd36d22e8cdb635a81f8d78da5c79dd1bd217445137ece29b9d",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model-mtp-bf16.safetensors"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model.safetensors.index.json",
+        "sha256": "596ab42f48c1c80debfcd49a3c3b2bc81bfb5f1942dce5a2d5a34161226ddf6d",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model.safetensors.index.json"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model_extra_tensors.safetensors",
+        "sha256": "60ae868096efc02e9dc56cc4a42d7129b8b4c8adf947d7baeaa018a83e049b1b",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model_extra_tensors.safetensors"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/mtp_draft_vocab_ids.pt",
+        "sha256": "8af9028616e41932e0c949cd5364d2da0a69d15375af9bb404cab1e4d723f581",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/mtp_draft_vocab_ids.pt"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/preprocessor_config.json",
+        "sha256": "27225450ac9c6529872ee1924fcb0962ff5634834f817040f444118116f4e516",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/preprocessor_config.json"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/tokenizer.json",
+        "sha256": "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/tokenizer.json"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/tokenizer_config.json",
+        "sha256": "b11349aafa7cdc6a320767cf7ceb29ed82f7eda5d65e8e0819e76f0ce947bf27",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/tokenizer_config.json"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/video_preprocessor_config.json",
+        "sha256": "7768af27c1fafa9cc9011c1dc20067e03f8915e03b63504550e11d5066986d13",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/video_preprocessor_config.json"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/vocab.json",
+        "sha256": "ce99b4cb2983d118806ce0a8b777a35b093e2000a503ebde25853284c9dfa003",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/vocab.json"
+      }
+    ]
+  },
+  {
+    "name": "swift-multiple-conversations",
+    "backend": "hyperqwen",
+    "description": "Serve several conversations at once, with up to 32,768 tokens per conversation, including replies. Requires the HyperQwen backend and enough GPU memory. Choose which GPUs to use in your deployment settings.",
+    "license": "Swift Open License v1.0 (commercial-use conditions); Apache-2.0 base",
+    "urls": [
+      "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/tree/2e6ad7769c0273e95813090acd147ca9a70c686f",
+      "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/blob/2e6ad7769c0273e95813090acd147ca9a70c686f/LICENSE"
+    ],
+    "tags": [
+      "hyperqwen",
+      "qwen",
+      "nvidia",
+      "experimental"
+    ],
+    "size": "16863298968B",
+    "config_file": {
+      "name": "swift-multiple-conversations",
       "backend": "hyperqwen",
       "parameters": {
         "model": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen",
@@ -205,13 +369,10 @@
       },
       "env": {
         "HQ_PROFILE": "batch",
-        "MAX_LEN": "4096",
-        "MAX_SEQS": "2",
-        "GPU_UTIL": "0.88",
+        "MAX_LEN": "32768",
+        "MAX_SEQS": "4",
         "VISION": "0",
         "INT8_ACT": "",
-        "PTH_FA": "0",
-        "FA2_FP8KV": "0",
         "PREFIX_CACHE": "1",
         "API_SERVERS": "1",
         "TOOLS": "1",
@@ -220,7 +381,177 @@
         "HQ_REQUEST_TIMEOUT": "900",
         "VLLM_OFFLOAD_KEEP_SHM": "1"
       },
-      "context_size": 4096
+      "context_size": 32768
+    },
+    "files": [
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/LICENSE",
+        "sha256": "1367057bf17041aa1d69286a1400be5f464d2f8b8f54f600088b209eac1850be",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/LICENSE"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/LICENSE-APACHE-2.0",
+        "sha256": "bbedc3fda3305820b977265f01b8619d87570a6739de3a5582c3464840f1e57a",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/LICENSE-APACHE-2.0"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/NOTICE",
+        "sha256": "3299c5e014d312e1db730cd933d51aece658b558bf3b686b018c3d38a3fdd040",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/NOTICE"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/QUANTIZATION_MANIFEST.json",
+        "sha256": "aa8bc9717b78918f446692e175051a4eb1e74c0656cda5f3d3e2f70c3a6806bc",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/QUANTIZATION_MANIFEST.json"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/README.md",
+        "sha256": "ddfb650e0b0a5a52d2f43e935008d7497b7e55bec0d0f10ffc93e905dd7d8b0e",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/README.md"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/RUNTIME.md",
+        "sha256": "4e887864e745d8c0c6517a96c2bd4e25c064eea7f7a150732aea96ebae86c215",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/RUNTIME.md"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/chat_template.jinja",
+        "sha256": "c3cf9e34abf4f9e36c2d72165aa9c132d3e2a725b6c2586aaa3a8af9d7a81041",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/chat_template.jinja"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/config.json",
+        "sha256": "7a6b1bbea65bf844cd3d824845dd54d57fe8c92d46249233e1347e90c9f41b3f",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/config.json"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/generation_config.json",
+        "sha256": "e70c136c1b78ddc1fb0905bac8e733a4dc448d4f852a5dd75143fffc70be550e",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/generation_config.json"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/merges.txt",
+        "sha256": "a9d356d7bdf1ef4949e3e748e95b8e10ad9d4e2e838eddc38a0a7b6b94d1db8d",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/merges.txt"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model-00001-of-00006.safetensors",
+        "sha256": "fb1fc665d7d4ba54c1f71ef905118367dcbdd657c959673ab9fca9892e415e49",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model-00001-of-00006.safetensors"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model-00002-of-00006.safetensors",
+        "sha256": "48ddebd951d8d8a9ecef51b1857403ca77e5ab2c63b2e7db4822e0908e2eeaac",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model-00002-of-00006.safetensors"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model-00003-of-00006.safetensors",
+        "sha256": "61bbd4ae1e4812f08aa8f903e9995746aea8c346a666b530d0a6774773350f1e",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model-00003-of-00006.safetensors"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model-00004-of-00006.safetensors",
+        "sha256": "0c7baff5aac711178c5ce841da1ebcbebf67bde21155e74f4adca5d4354c178a",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model-00004-of-00006.safetensors"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model-00005-of-00006.safetensors",
+        "sha256": "0cc1b9b1cde51d81fd7f53d91716399c30c4a5a166503dbd76ac65c63bb881c9",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model-00005-of-00006.safetensors"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model-00006-of-00006.safetensors",
+        "sha256": "65c1248e479775518d38a1675859380890a76c455f25de37b613bef71281a4fb",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model-00006-of-00006.safetensors"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model-mtp-bf16.safetensors",
+        "sha256": "9710e90c273e7cd36d22e8cdb635a81f8d78da5c79dd1bd217445137ece29b9d",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model-mtp-bf16.safetensors"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model.safetensors.index.json",
+        "sha256": "596ab42f48c1c80debfcd49a3c3b2bc81bfb5f1942dce5a2d5a34161226ddf6d",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model.safetensors.index.json"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/model_extra_tensors.safetensors",
+        "sha256": "60ae868096efc02e9dc56cc4a42d7129b8b4c8adf947d7baeaa018a83e049b1b",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/model_extra_tensors.safetensors"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/mtp_draft_vocab_ids.pt",
+        "sha256": "8af9028616e41932e0c949cd5364d2da0a69d15375af9bb404cab1e4d723f581",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/mtp_draft_vocab_ids.pt"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/preprocessor_config.json",
+        "sha256": "27225450ac9c6529872ee1924fcb0962ff5634834f817040f444118116f4e516",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/preprocessor_config.json"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/tokenizer.json",
+        "sha256": "0997f410c57a1f4e53b09e4be8f4a172d90edd9564368fb0847030937229b9f3",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/tokenizer.json"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/tokenizer_config.json",
+        "sha256": "b11349aafa7cdc6a320767cf7ceb29ed82f7eda5d65e8e0819e76f0ce947bf27",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/tokenizer_config.json"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/video_preprocessor_config.json",
+        "sha256": "7768af27c1fafa9cc9011c1dc20067e03f8915e03b63504550e11d5066986d13",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/video_preprocessor_config.json"
+      },
+      {
+        "filename": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/vocab.json",
+        "sha256": "ce99b4cb2983d118806ce0a8b777a35b093e2000a503ebde25853284c9dfa003",
+        "uri": "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/2e6ad7769c0273e95813090acd147ca9a70c686f/vocab.json"
+      }
+    ]
+  },
+  {
+    "name": "swift-multiple-long-conversations",
+    "backend": "hyperqwen",
+    "description": "Serve several conversations at once, with up to 131,072 tokens per conversation, including replies. Requires the HyperQwen backend and enough GPU memory. Choose which GPUs to use in your deployment settings.",
+    "license": "Swift Open License v1.0 (commercial-use conditions); Apache-2.0 base",
+    "urls": [
+      "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/tree/2e6ad7769c0273e95813090acd147ca9a70c686f",
+      "https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/blob/2e6ad7769c0273e95813090acd147ca9a70c686f/LICENSE"
+    ],
+    "tags": [
+      "hyperqwen",
+      "qwen",
+      "nvidia",
+      "experimental"
+    ],
+    "size": "16863298968B",
+    "config_file": {
+      "name": "swift-multiple-long-conversations",
+      "backend": "hyperqwen",
+      "parameters": {
+        "model": "hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen",
+        "temperature": 0
+      },
+      "template": {
+        "use_tokenizer_template": true
+      },
+      "env": {
+        "HQ_PROFILE": "batch",
+        "MAX_LEN": "131072",
+        "MAX_SEQS": "4",
+        "VISION": "0",
+        "INT8_ACT": "",
+        "PREFIX_CACHE": "1",
+        "API_SERVERS": "1",
+        "TOOLS": "1",
+        "EXTRA_ARGS": "--enforce-eager",
+        "HQ_STARTUP_TIMEOUT": "900",
+        "HQ_REQUEST_TIMEOUT": "900",
+        "VLLM_OFFLOAD_KEEP_SHM": "1"
+      },
+      "context_size": 131072
     },
     "files": [
       {

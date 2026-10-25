@@ -8,32 +8,69 @@ ROOT = Path(__file__).resolve().parents[1]
 REVISION = '2e6ad7769c0273e95813090acd147ca9a70c686f'
 MODEL = 'hyperqwen/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen'
 UPSTREAM = 'https://huggingface.co/daavidhauser/Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen/resolve/' + REVISION + '/'
+PROFILES = {
+    'swift-chat': (32768, 1, 'single'),
+    'swift-long-conversations': (131072, 1, 'single'),
+    'swift-multiple-conversations': (32768, 4, 'batch'),
+    'swift-multiple-long-conversations': (131072, 4, 'batch'),
+}
 
 
 class GalleryTests(unittest.TestCase):
     def setUp(self):
         self.models = json.loads((ROOT / 'gallery/models.yaml').read_text())
 
-    def test_profiles_use_4096_tokens_and_two_sequences(self):
-        self.assertEqual([item['name'] for item in self.models],
-                         ['swift-hyperqwen-3090-graphs', 'swift-hyperqwen-3090-batch'])
+    def test_profiles_cover_length_and_conversation_choices(self):
+        self.assertEqual([item['name'] for item in self.models], list(PROFILES))
         for item in self.models:
+            context, sequences, profile = PROFILES[item['name']]
             config = item['config_file']
+            env = config['env']
             self.assertEqual(config['name'], item['name'])
             self.assertEqual(config['backend'], 'hyperqwen')
             self.assertEqual(config['parameters']['model'], MODEL)
             self.assertTrue(config['template']['use_tokenizer_template'])
-            self.assertEqual(config['env']['MAX_LEN'], '4096')
-            self.assertEqual(config['env']['MAX_SEQS'], '2')
-            self.assertTrue(all(isinstance(value, str) for value in config['env'].values()))
-        self.assertEqual(self.models[0]['config_file']['env']['SPEC'], 'mtp')
-        self.assertEqual(self.models[1]['config_file']['env']['HQ_PROFILE'], 'batch')
-        self.assertEqual(self.models[1]['config_file']['env']['INT8_ACT'], '')
-        self.assertEqual(self.models[1]['config_file']['env']['EXTRA_ARGS'], '--enforce-eager')
+            self.assertEqual(config['context_size'], context)
+            self.assertEqual(env['MAX_LEN'], str(context))
+            self.assertEqual(env['MAX_SEQS'], str(sequences))
+            self.assertEqual(env['HQ_PROFILE'], profile)
+            self.assertTrue(all(isinstance(value, str) for value in env.values()))
+            if profile == 'single':
+                self.assertEqual(env['SPEC'], 'mtp')
+                self.assertEqual(env['CTX'], 'long')
+            else:
+                self.assertEqual(env['INT8_ACT'], '')
+                self.assertEqual(env['EXTRA_ARGS'], '--enforce-eager')
+                self.assertNotIn('SPEC', env)
+                self.assertNotIn('CTX', env)
+
+    def test_profiles_leave_hardware_selection_to_deployment(self):
+        for item in self.models:
+            env = item['config_file']['env']
+            for key in ('CUDA_VISIBLE_DEVICES', 'NVIDIA_VISIBLE_DEVICES',
+                        'PTH_FA', 'FA2_FP8KV', 'GPU_UTIL', 'HQ_ROOT'):
+                self.assertNotIn(key, env)
+            self.assertNotIn('tensor-parallel-size', env.get('EXTRA_ARGS', ''))
+            text = ' '.join([item['name'], item['description'], *item['tags']]).lower()
+            for term in ('3090', 'batch', 'graphs', 'mtp', 'gpu-'):
+                self.assertNotIn(term, text)
+
+    def test_examples_match_gallery_configuration(self):
+        self.assertEqual({path.stem for path in (ROOT / 'examples').glob('*.yaml')},
+                         set(PROFILES))
+        for item in self.models:
+            config = item['config_file']
+            example = (ROOT / 'examples' / (item['name'] + '.yaml')).read_text()
+            self.assertIn('name: ' + item['name'] + '\n', example)
+            self.assertIn('context_size: ' + str(config['context_size']) + '\n', example)
+            self.assertIn('  model: ' + MODEL.removeprefix('hyperqwen/') + '\n', example)
+            for key, value in config['env'].items():
+                self.assertIn('  ' + key + ': ' + json.dumps(value) + '\n', example)
 
     def test_prepared_artifacts_are_pinned_and_nonexecutable(self):
         files = self.models[0]['files']
-        self.assertEqual(files, self.models[1]['files'])
+        for model in self.models[1:]:
+            self.assertEqual(files, model['files'])
         self.assertEqual(len(files), 25)
         names = [item['filename'] for item in files]
         self.assertEqual(len(names), len(set(names)))
