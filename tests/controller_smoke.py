@@ -14,7 +14,7 @@ import time
 from urllib.error import URLError
 from urllib.request import Request, ProxyHandler, build_opener
 
-from tests.checkpoint_fixture import create_checkpoint
+from tests.checkpoint_fixture import create_checkpoint, create_dflash_helper
 
 
 def fixture_python(package):
@@ -40,9 +40,16 @@ def main(binary, package=None):
         model = models / 'prepared-model'
         model.mkdir(parents=True)
         create_checkpoint(model)
+        helper = model / 'dflash'
+        create_dflash_helper(helper)
         launcher = work / 'hq/single-user/start_qwen.sh'
         launcher.parent.mkdir(parents=True)
-        launcher.write_text(f'exec {shlex.quote(fixture_python(package))} {shlex.quote(str(root / "tests/fake_hq.py"))}\n')
+        launcher.write_text('set -eu\n'
+                            + 'if [ "$SPEC" = dflash2 ]; then\n'
+                            + '  test "$DRAFT" = ' + shlex.quote(str(helper)) + '\n'
+                            + '  test "$DFLASH_TOKENS" = 7\n'
+                            + 'fi\n'
+                            + f'exec {shlex.quote(fixture_python(package))} {shlex.quote(str(root / "tests/fake_hq.py"))}\n')
         wrapper = work / 'backends/hyperqwen/run.sh'
         wrapper.parent.mkdir(parents=True)
         if package:
@@ -54,11 +61,14 @@ def main(binary, package=None):
             command = f'export PYTHONPATH={shlex.quote(str(root))}\nexec {shlex.quote(sys.executable)} -m hyperqwen_backend.server "$@"'
         wrapper.write_text('#!/bin/sh\n' + command + '\n')
         wrapper.chmod(0o755)
-        (models / 'probe.yaml').write_text(json.dumps({
-            'name': 'hq-probe', 'backend': 'hyperqwen',
-            'parameters': {'model': 'prepared-model', 'temperature': 0.7},
-            'template': {'use_tokenizer_template': True},
-            'env': {'HQ_ROOT': str(work / 'hq'), 'HQ_STARTUP_TIMEOUT': '5', 'SPEC': 'mtp'}}))
+        for name, spec in (('hq-probe', 'mtp'), ('hq-dflash-probe', 'dflash2')):
+            startup = {'HQ_ROOT': str(work / 'hq'), 'HQ_STARTUP_TIMEOUT': '5', 'SPEC': spec}
+            if spec == 'dflash2':
+                startup.update(DRAFT='dflash', DFLASH_TOKENS='7')
+            (models / (name + '.yaml')).write_text(json.dumps({
+                'name': name, 'backend': 'hyperqwen',
+                'parameters': {'model': 'prepared-model', 'temperature': 0.7},
+                'template': {'use_tokenizer_template': True}, 'env': startup}))
         with socket.socket() as sock:
             sock.bind(('127.0.0.1', 0))
             port = sock.getsockname()[1]
@@ -111,7 +121,12 @@ def main(binary, package=None):
                 with request('/v1/chat/completions', payload) as response:
                     continuation = json.load(response)
                 assert continuation['choices'][0]['message']['content'] == 'tool acknowledged', continuation
-                print('LocalAI chat, streaming, tools, reasoning and tool replies passed')
+                with request('/v1/chat/completions', {
+                    'model': 'hq-dflash-probe', 'messages': [{'role': 'user', 'content': 'Hi'}]
+                }) as response:
+                    helper_result = json.load(response)
+                assert helper_result['choices'][0]['message']['content'] == 'hello', helper_result
+                print('LocalAI chat, streaming, tools, reasoning, tool replies and DFlash helper paths passed')
             except Exception:
                 log.flush()
                 print(log_path.read_text(), file=sys.stderr, flush=True)

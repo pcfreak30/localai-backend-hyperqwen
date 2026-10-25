@@ -2,6 +2,15 @@
 import json
 
 
+def create_dflash_helper(helper):
+    helper.mkdir(parents=True, exist_ok=True)
+    (helper / 'config.json').write_text(json.dumps({
+        'architectures': ['DFlash2DraftModel'],
+        'dflash_config': {'block_size': 8},
+    }))
+    (helper / 'model.safetensors').write_text('CPU TEST PLACEHOLDER: NOT MODEL WEIGHTS')
+
+
 def create_checkpoint(model):
     config = {'architectures': ['Qwen3_5ForConditionalGeneration'],
               'quantization_config': {'quant_method': 'compressed-tensors', 'format': 'pack-quantized',

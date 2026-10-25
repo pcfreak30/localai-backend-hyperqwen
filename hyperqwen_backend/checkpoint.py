@@ -1,4 +1,4 @@
-"""Read-only metadata/file preflight for prepared, indexed HQ checkpoints.
+"""Read-only metadata/file preflight for prepared HQ checkpoints and helpers.
 
 Never opens tensor files, deserializes pickle, executes model code or downloads.
 Native HQ still owns hardware/plugin validation and tensor loading.
@@ -34,6 +34,16 @@ def _file(path: Path):
         valid = False
     if not valid:
         raise CheckpointError(f'missing or empty checkpoint file: {path.name}')
+
+
+def validate_dflash_helper(helper: Path):
+    """Check the single-file DFlash2 helper without opening its tensor payload."""
+    config = _object(helper / 'config.json')
+    if config.get('architectures') != ['DFlash2DraftModel']:
+        raise CheckpointError('DFlash helper requires the DFlash2DraftModel architecture')
+    if not isinstance(config.get('dflash_config'), dict) or not config['dflash_config']:
+        raise CheckpointError('DFlash helper requires dflash_config metadata')
+    _file(helper / 'model.safetensors')
 
 
 def validate_checkpoint(model: Path, environment: dict[str, str]):
