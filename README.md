@@ -101,7 +101,38 @@ With existing weights, copy the chosen YAML into LocalAI's models root and set `
 
 To add the model gallery to LocalAI, use this repository's raw `gallery/models.yaml` URL at a chosen commit. Keep any other galleries already configured. Listing models does not download weights; installing a recipe downloads 16.9 GB from upstream. Use the existing-weights instructions if you do not want a download. The model names are `swift-hyperqwen-3090-graphs` and `swift-hyperqwen-3090-batch`.
 
-Install or register the HyperQwen backend first. `gallery/backends.yaml` is empty because no signed runtime image has been published. The model gallery cannot install the backend yet.
+Install or register the HyperQwen backend first. The backend gallery below provides its signed image; the model recipes download weights separately.
+
+## Install the signed backend
+
+Add this object to LocalAI's backend-gallery JSON list, keeping any galleries already configured:
+
+```json
+{
+  "name": "hyperqwen",
+  "url": "https://raw.githubusercontent.com/pcfreak30/localai-backend-hyperqwen/develop/gallery/backends.yaml",
+  "verification": {
+    "issuer": "https://token.actions.githubusercontent.com",
+    "identity": "https://github.com/pcfreak30/localai-backend-hyperqwen/.github/workflows/package.yml@refs/heads/develop"
+  }
+}
+```
+
+LocalAI accepts this list through `LOCALAI_BACKEND_GALLERIES` or `--backend-galleries`. Replace `develop` in the catalog URL with a chosen commit SHA if you want the catalog to stay fixed. The catalog's image URL already uses a full SHA256 digest rather than a moving tag.
+
+With that gallery configured:
+
+```sh
+local-ai backends install hyperqwen@hyperqwen --require-backend-integrity
+```
+
+The verification policy is required for signed OCI installs. Keep strict integrity enabled; a policy with the wrong signing identity must fail. No GitHub login is needed to download the public image.
+
+Set `TMPDIR` to an existing writable directory with room for the download and extraction. LocalAI stores compressed layers and a temporary tar there; a small `/tmp` can fill even when the backend directory has enough space. If GHCR returns an HTTP/2 `PROTOCOL_ERROR`, retry the install with `GODEBUG=http2client=0`. That changes the HTTP version without disabling signature checks.
+
+This installs the runtime only. Select an example above to use existing prepared weights, or install a model recipe when you intend to download its weights. The supplied profiles target one RTX 3090 with 4,096 tokens and two requests at once.
+
+Keep the previous signed image digest and gallery commit for rollback. If an update fails, use that catalog revision and stop the affected LocalAI instance before replacing its backend.
 
 ## Build and publish through GitHub
 
