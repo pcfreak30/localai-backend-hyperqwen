@@ -1,0 +1,28 @@
+# Several longer Swift conversations with an additional prepared helper model.
+name: swift-multiple-long-conversations-with-helper
+context_size: 131072
+backend: hyperqwen
+parameters:
+  model: Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen
+  temperature: 0
+template:
+  use_tokenizer_template: true
+env:
+  HQ_PROFILE: "single"
+  SPEC: "dflash2"
+  DRAFT_METHOD: "dflash"
+  DRAFT: "dflash"
+  DFLASH_TOKENS: "7"
+  LOOKUP: "1"
+  ASYNC_SCHED: "0"
+  CTX: "long"
+  MAX_LEN: "131072"
+  MAX_SEQS: "4"
+  VISION: "0"
+  PREFIX_CACHE: "1"
+  API_SERVERS: "1"
+  TOOLS: "1"
+  EXTRA_ARGS: "--enforce-eager"
+  HQ_STARTUP_TIMEOUT: "900"
+  HQ_REQUEST_TIMEOUT: "900"
+  VLLM_OFFLOAD_KEEP_SHM: "1"

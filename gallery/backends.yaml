@@ -2,6 +2,6 @@
   {
     "name": "hyperqwen",
     "description": "Run HyperQwen models with LocalAI on a 64-bit Linux PC with an NVIDIA GPU. Model weights are not included.",
-    "uri": "oci://ghcr.io/pcfreak30/localai-backend-hyperqwen@sha256:b1c22fdd995f2fb68e0a280d7adbe74aa8302df33d41957f2721d5ed60ff1a6b"
+    "uri": "oci://ghcr.io/pcfreak30/localai-backend-hyperqwen@sha256:82c86cb8af995f79a58da57823ced4d82fbe4200c18afa6bf9daac3400b90e31"
   }
 ]

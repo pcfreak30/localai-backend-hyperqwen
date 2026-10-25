@@ -41,7 +41,8 @@ def main(binary, package=None):
         model.mkdir(parents=True)
         create_checkpoint(model)
         helper = model / 'dflash'
-        create_dflash_helper(helper)
+        helper_source = models / 'fixture-helper'
+        create_dflash_helper(helper_source)
         launcher = work / 'hq/single-user/start_qwen.sh'
         launcher.parent.mkdir(parents=True)
         launcher.write_text('set -eu\n'
@@ -65,10 +66,36 @@ def main(binary, package=None):
             startup = {'HQ_ROOT': str(work / 'hq'), 'HQ_STARTUP_TIMEOUT': '5', 'SPEC': spec}
             if spec == 'dflash2':
                 startup.update(DRAFT='dflash', DFLASH_TOKENS='7')
-            (models / (name + '.yaml')).write_text(json.dumps({
+            configuration = {
                 'name': name, 'backend': 'hyperqwen',
                 'parameters': {'model': 'prepared-model', 'temperature': 0.7},
-                'template': {'use_tokenizer_template': True}, 'env': startup}))
+                'template': {'use_tokenizer_template': True}, 'env': startup}
+            if spec == 'mtp':
+                (models / (name + '.yaml')).write_text(json.dumps(configuration))
+                continue
+            # LocalAI roots gallery filenames at models/, not at parameters.model.
+            files = []
+            for filename in ('config.json', 'model.safetensors'):
+                source = helper_source / filename
+                files.append({'filename': 'prepared-model/dflash/' + filename,
+                              'uri': source.as_uri(),
+                              'sha256': hashlib.sha256(source.read_bytes()).hexdigest()})
+            catalog = models / 'fixture-gallery.json'
+            catalog.write_text(json.dumps([{'name': name, 'config_file': configuration, 'files': files}]))
+            installed = subprocess.run([
+                str(binary), 'models', 'install', 'fixture@' + name,
+                '--models-path', str(models), '--galleries',
+                json.dumps([{'name': 'fixture', 'url': catalog.as_uri()}]),
+                '--backend-galleries', '[]', '--autoload-backend-galleries=false',
+                '--disable-predownload-scan',
+            ], env={key: value for key, value in os.environ.items()
+                    if not key.startswith(('LOCALAI_', 'P2P'))},
+                capture_output=True, text=True, timeout=30)
+            if installed.returncode:
+                raise RuntimeError('fixture gallery install failed:\n' + installed.stdout + installed.stderr)
+            for file in files:
+                assert hashlib.sha256((models / file['filename']).read_bytes()).hexdigest() == file['sha256']
+            print('LocalAI installed nested helper files with SHA256 checks', flush=True)
         with socket.socket() as sock:
             sock.bind(('127.0.0.1', 0))
             port = sock.getsockname()[1]
