@@ -14,6 +14,7 @@ from urllib.request import Request, ProxyHandler, build_opener
 from urllib.error import URLError
 
 from .checkpoint import CheckpointError, validate_checkpoint, validate_dflash_helper
+from .hardware import HardwareConfigurationError, apply_hardware_policy
 
 
 class ConfigurationError(ValueError):
@@ -72,6 +73,10 @@ def launch_configuration(root: Path, model: Path, environment: dict[str, str]):
     env["HOST"] = "127.0.0.1"
     # PRINT_ARGV would turn a successful spawn into a non-serving process.
     env.pop("PRINT_ARGV", None)
+    try:
+        env = apply_hardware_policy(env)
+    except HardwareConfigurationError as exc:
+        raise ConfigurationError(str(exc)) from exc
     return ["bash", str(script)], env
 
 

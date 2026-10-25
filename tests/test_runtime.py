@@ -4,6 +4,7 @@ from pathlib import Path
 import tempfile
 import unittest
 import threading
+from unittest.mock import patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from hyperqwen_backend.runtime import ConfigurationError, Runtime, launch_configuration, positive_seconds
@@ -76,6 +77,21 @@ class ConfigurationTests(unittest.TestCase):
     def test_native_dependency_path(self):
         _, env = launch_configuration(self.root, self.model, {"PYTHONPATH": "adapter", "HQ_NATIVE_PYTHONPATH": "native"})
         self.assertEqual(env["PYTHONPATH"], "native")
+
+    def test_auto_detection_uses_native_dependencies_before_launch(self):
+        for profile in ('single', 'batch'):
+            with patch('hyperqwen_backend.hardware.visible_gpu_count', return_value=2) as probe:
+                _, env = launch_configuration(self.root, self.model, {
+                    'HQ_PROFILE': profile, 'HQ_GPU_SHARING': 'auto',
+                    'HQ_NATIVE_PYTHONPATH': 'native', 'PYTHONPATH': 'adapter',
+                    'CUDA_VISIBLE_DEVICES': 'selected-devices',
+                })
+                self.assertEqual(probe.call_args.args[0]['PYTHONPATH'], 'native')
+                self.assertEqual(probe.call_args.args[0]['CUDA_VISIBLE_DEVICES'], 'selected-devices')
+                self.assertEqual(env['EXTRA_ARGS'], '--tensor-parallel-size 2')
+        with patch('hyperqwen_backend.hardware.visible_gpu_count', return_value=0):
+            with self.assertRaises(ConfigurationError):
+                launch_configuration(self.root, self.model, {'HQ_GPU_SHARING': 'auto'})
 
     def test_timeout_values(self):
         self.assertEqual(positive_seconds('2.5', 'timeout'), 2.5)
