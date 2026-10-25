@@ -13,7 +13,7 @@ import time
 from urllib.request import Request, ProxyHandler, build_opener
 from urllib.error import URLError
 
-from .checkpoint import CheckpointError, validate_checkpoint
+from .checkpoint import CheckpointError, validate_checkpoint, validate_dflash_helper
 
 
 class ConfigurationError(ValueError):
@@ -51,6 +51,20 @@ def launch_configuration(root: Path, model: Path, environment: dict[str, str]):
         raise ConfigurationError(f"missing HQ launcher: {script}")
     # Never invoke docker/entrypoint.sh: it prepares/downloads default weights.
     env = dict(environment)
+    if (profile == 'single' and env.get('SPEC') == 'dflash2'
+            and (env.get('DRAFT_METHOD') or 'dflash') == 'dflash' and env.get('DRAFT')):
+        helper = Path(env['DRAFT'])
+        try:
+            if not helper.is_absolute():
+                helper = (model / helper).resolve()
+                if not helper.is_relative_to(model):
+                    raise ValueError('relative DRAFT directory escapes the model directory')
+            else:
+                helper = helper.resolve()
+            validate_dflash_helper(helper)
+        except (OSError, RuntimeError, ValueError) as exc:
+            raise ConfigurationError(f'invalid DFlash helper: {exc}') from exc
+        env['DRAFT'] = str(helper)
     env.pop("HQ_PROFILE", None)
     if "HQ_NATIVE_PYTHONPATH" in env:
         env["PYTHONPATH"] = env["HQ_NATIVE_PYTHONPATH"]

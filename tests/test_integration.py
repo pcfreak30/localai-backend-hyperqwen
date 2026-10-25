@@ -12,7 +12,7 @@ import grpc
 import backend_pb2 as pb
 import backend_pb2_grpc as rpc
 from hyperqwen_backend.server import Backend, create_server
-from tests.checkpoint_fixture import create_checkpoint
+from tests.checkpoint_fixture import create_checkpoint, create_dflash_helper
 
 
 class IntegrationTests(unittest.IsolatedAsyncioTestCase):
@@ -53,6 +53,26 @@ class IntegrationTests(unittest.IsolatedAsyncioTestCase):
         request = pb.PredictOptions(ModelIdentity=str(self.model))
         request.Messages.add(role='user', content=content)
         return request
+
+    async def test_dflash_relative_helper_reaches_child_process(self):
+        helper = self.model / 'dflash'
+        create_dflash_helper(helper)
+        self.launcher.write_text('set -eu\n'
+                                 + 'test "$DRAFT" = ' + shlex.quote(str(helper)) + '\n'
+                                 + 'test "$SPEC" = dflash2\n' + self.command)
+        with patch.dict(os.environ, {'SPEC': 'dflash2', 'DRAFT': 'dflash'}):
+            await self.load()
+            self.assertEqual((await self.stub.Predict(self.request())).message, b'hello')
+
+    async def test_missing_dflash_helper_can_be_fixed_and_retried(self):
+        with patch.dict(os.environ, {'SPEC': 'dflash2', 'DRAFT': 'dflash'}):
+            result = await self.stub.LoadModel(pb.ModelOptions(Model=str(self.model)), timeout=10)
+            self.assertFalse(result.success)
+            self.assertIn('invalid DFlash helper', result.message)
+            self.assertIsNone(self.backend.runtime.process)
+            create_dflash_helper(self.model / 'dflash')
+            await self.load()
+            self.assertEqual((await self.stub.Predict(self.request())).message, b'hello')
 
     async def test_load_concurrent_predict_stream_unload_reload(self):
         for _ in range(2):

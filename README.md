@@ -78,13 +78,33 @@ HQ reads startup settings from the backend process environment:
 
 - `HQ_ROOT`: installed HQ directory, default `/app`.
 - `HQ_PROFILE`: `single` (default) or `batch`.
-- `SPEC`, `MAX_LEN`, `MAX_SEQS`, `GPU_UTIL`, `INT8_ACT` and other HQ settings pass through unchanged. Empty and unset values stay distinct.
+- `SPEC`, `MAX_LEN`, `MAX_SEQS`, `GPU_UTIL`, `INT8_ACT` and other HQ settings pass through unchanged, except for the DFlash helper path resolution described below. Empty and unset values stay distinct.
 - `HQ_STARTUP_TIMEOUT` and `HQ_REQUEST_TIMEOUT`: finite positive seconds, default 600. The HTTP timeout limits inactivity, not total generation time.
 - `HQ_GRPC_MAX_MESSAGE_MB`: integer from 1 to 512, default 50.
 
 The adapter sets the host, port, API key and internal model name. EXTRA_ARGS cannot override them. Configure startup through HQ environment variables rather than typed load settings or generic engine_args/options. Sampling settings come from each generation request.
 
 Set `template.use_tokenizer_template: true` in LocalAI model YAML for chat and tools. This keeps messages structured so HQ's tokenizer template can handle them.
+
+### DFlash helpers
+
+With `HQ_PROFILE=single`, `SPEC=dflash2` and the default `DRAFT_METHOD=dflash`, an explicit `DRAFT` selects the additional helper model. Relative paths resolve beneath the target model directory, not the runtime directory. For example:
+
+```yaml
+env:
+  HQ_PROFILE: "single"
+  SPEC: "dflash2"
+  DRAFT: "dflash"
+  DFLASH_TOKENS: "7"
+  LOOKUP: "1"
+  ASYNC_SCHED: "0"
+```
+
+Place the prepared helper's `config.json` and single `model.safetensors` file in the target model's `dflash/` subdirectory. Absolute helper paths are also accepted. Relative paths, including directory symlinks, may not escape the target model directory; individual cache-file symlinks are supported.
+
+The adapter checks the helper's DFlash2 architecture, metadata and nonempty payload file without opening tensors. Native HyperQwen still validates compatibility and loads the weights. There is no automatic download, conversion or execution of model-repository scripts. Batch mode does not use these helper settings. Leaving `DRAFT` unset preserves native helper discovery.
+
+Model-relative `DRAFT` requires a runtime built with this feature. Older images, including the `b1c22fdd995f` image, do not resolve helper paths this way. The existing gallery profiles and signed image are unchanged by this runtime addition.
 
 ## Swift profiles and model gallery
 
