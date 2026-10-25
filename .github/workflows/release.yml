@@ -24,7 +24,7 @@ jobs:
     environment: release
     permissions:
       contents: read
-      packages: read
+      packages: write
     env:
       DIGEST: ${{ inputs.digest }}
       GPU_REVIEWED: ${{ inputs.gpu_reviewed }}
@@ -59,6 +59,20 @@ jobs:
           jq -n --arg image "$IMAGE_REF" --arg source "$source" --arg release "$GITHUB_SHA" \
             '{image: $image, source_commit: $source, release_workflow_commit: $release}' > build/release/image.json
           printf 'Approved image: %s\n\nBuilt from: %s\n' "$IMAGE_REF" "$source" >> "$GITHUB_STEP_SUMMARY"
+      - name: Promote the verified digest to latest
+        run: |
+          latest="${IMAGE_REF%@*}:latest"
+          # Preserve a single manifest instead of wrapping it in a new index:
+          # signatures and approval belong to the original digest.
+          docker buildx imagetools create --prefer-index=false --tag "$latest" "$IMAGE_REF"
+          promoted=$(docker buildx imagetools inspect "$latest" | awk '$1 == "Digest:" {print $2}')
+          test "$promoted" = "$DIGEST"
+          build_identity="https://github.com/$GITHUB_REPOSITORY/.github/workflows/package.yml@refs/heads/develop"
+          cosign verify --new-bundle-format \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity "$build_identity" --output json "$latest" > build/release/latest-signature.json
+          jq -n --arg image "$latest" '[{name: "hyperqwen", uri: ("oci://" + $image)}]' > build/release/backends-latest.yaml
+          printf '\nPromoted update channel: %s (digest unchanged)\n' "$latest" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: hyperqwen-release
