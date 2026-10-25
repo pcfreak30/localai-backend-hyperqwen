@@ -125,7 +125,7 @@ gh run watch RUN_ID
 gh run download RUN_ID -n hyperqwen-candidate -D build/candidate
 ```
 
-This publishes a test image in `ghcr.io/pcfreak30/localai-backend-hyperqwen`. Each run gets its own tag. The downloaded `candidate.json` records the image digest, source commit and signing identity. The signature also records the source commit. Registry login uses GitHub's job token; signing uses GitHub OIDC and Cosign 2.6.5. No personal token or signing key is required. New GHCR packages may need their visibility changed before anonymous users can install them.
+This publishes a test image in `ghcr.io/pcfreak30/localai-backend-hyperqwen`. Each run gets its own tag. The downloaded `candidate.json` records the image digest, source commit and signing identity. The source commit is stored in the image labels and covered by the signed image digest. Registry login uses GitHub's job token; signing uses GitHub OIDC and Cosign 2.6.5 with Sigstore bundles stored as OCI 1.1 referrers, as required by LocalAI 4.12.1. No personal token or signing key is required. New GHCR packages may need their visibility changed before anonymous users can install them.
 
 Test that exact image digest with existing read-only weights on the intended GPU before approving it for the backend gallery. Check generation, streaming, tools, cancellation and worker cleanup, and check that GPU memory returns after shutdown. The build job's CPU checks do not perform those tests.
 
@@ -138,9 +138,9 @@ gh run watch RELEASE_RUN_ID
 gh run download RELEASE_RUN_ID -n hyperqwen-release -D build/release
 ```
 
-Replace the run IDs and image digest with the actual values. The release job checks the build workflow's signature, signs the same digest under the release workflow's identity and creates backend-gallery files. It does not download image layers, rebuild, deploy or commit anything. The `gpu_reviewed` input is your acknowledgement, not an automated GPU check. Configure reviewers on GitHub's `release` environment if release approval should require another person.
+Replace the run IDs and image digest with the actual values. The release job checks the build workflow's signature, reads the source commit from the signed image labels and creates backend-gallery files. It does not download image layers, rebuild, sign again, deploy or commit anything. The `gpu_reviewed` input is your acknowledgement, not an automated GPU check. Configure reviewers on GitHub's `release` environment if release approval should require another person.
 
-Review the generated `backends.yaml` and `verification.json` before adding the backend entry and trusted signing policy to LocalAI. The trusted release identity is `https://github.com/pcfreak30/localai-backend-hyperqwen/.github/workflows/release.yml@refs/heads/develop`, with issuer `https://token.actions.githubusercontent.com`. The build workflow signs test images under `package.yml`; the backend gallery should trust the release identity.
+Review the generated `backends.yaml` and `verification.json` before adding the backend entry and trusted signing policy to LocalAI. The trusted signing identity is `https://github.com/pcfreak30/localai-backend-hyperqwen/.github/workflows/package.yml@refs/heads/develop`, with issuer `https://token.actions.githubusercontent.com`. The gallery uses the build signature after GPU review. Approval does not add another signature because LocalAI 4.12.1 selects a bundle before checking the signing identity.
 
 Neither workflow updates this repository's gallery or opens a PR. Check that intended users can pull and verify the signed image before adding it to the backend gallery. Keep the previous signed image digest and gallery commit for rollback; do not rebuild an old release to roll back.
 
