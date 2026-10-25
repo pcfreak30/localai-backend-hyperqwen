@@ -1,0 +1,23 @@
+# Swift conversations with longer inputs. Context must fit available GPU memory.
+name: swift-long-conversations
+context_size: 131072
+backend: hyperqwen
+parameters:
+  model: Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen
+  temperature: 0
+template:
+  use_tokenizer_template: true
+env:
+  HQ_PROFILE: "single"
+  SPEC: "mtp"
+  DRAFT_TOKENS: "2"
+  CTX: "long"
+  MAX_LEN: "131072"
+  MAX_SEQS: "1"
+  VISION: "0"
+  PREFIX_CACHE: "1"
+  API_SERVERS: "1"
+  TOOLS: "1"
+  HQ_STARTUP_TIMEOUT: "900"
+  HQ_REQUEST_TIMEOUT: "900"
+  VLLM_OFFLOAD_KEEP_SHM: "1"

@@ -46,6 +46,33 @@ class ConfigurationTests(unittest.TestCase):
             with self.assertRaises(ConfigurationError):
                 launch_configuration(self.root, self.model, {"EXTRA_ARGS": value})
 
+    def test_shared_model_gpu_settings_reach_both_native_launchers(self):
+        for profile in ('single', 'batch'):
+            for count in (2, 4):
+                with self.subTest(profile=profile, count=count):
+                    devices = ','.join(str(index) for index in range(count))
+                    extra = ('--enforce-eager ' if profile == 'batch' else '')
+                    extra += '--tensor-parallel-size ' + str(count)
+                    _, env = launch_configuration(self.root, self.model, {
+                        'HQ_PROFILE': profile,
+                        'CUDA_VISIBLE_DEVICES': devices,
+                        'EXTRA_ARGS': extra,
+                    })
+                    self.assertEqual(env['CUDA_VISIBLE_DEVICES'], devices)
+                    self.assertEqual(env['EXTRA_ARGS'], extra)
+
+    def test_separate_model_copies_keep_their_gpu_selection(self):
+        selected = []
+        for device in ('0', '1'):
+            _, env = launch_configuration(self.root, self.model, {
+                'CUDA_VISIBLE_DEVICES': device,
+            })
+            selected.append(env)
+        self.assertEqual(selected[0]['CUDA_VISIBLE_DEVICES'], '0')
+        self.assertEqual(selected[1]['CUDA_VISIBLE_DEVICES'], '1')
+        self.assertNotIn('EXTRA_ARGS', selected[0])
+        self.assertNotIn('EXTRA_ARGS', selected[1])
+
     def test_native_dependency_path(self):
         _, env = launch_configuration(self.root, self.model, {"PYTHONPATH": "adapter", "HQ_NATIVE_PYTHONPATH": "native"})
         self.assertEqual(env["PYTHONPATH"], "native")

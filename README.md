@@ -88,20 +88,46 @@ Set `template.use_tokenizer_template: true` in LocalAI model YAML for chat and t
 
 ## Swift profiles and model gallery
 
-Use these examples with `Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen` on one RTX 3090. Run one profile per GPU.
+These four profiles use `Swift-1.5-Qwen3.8-27B-W4A16-HyperQwen`. Choose by conversation length and how many conversations you want to serve at once, then choose GPUs separately.
 
-| Example | Settings | Context and requests |
+| Profile | Context limit per conversation | Conversations at once |
 |---|---|---|
-| `examples/swift-3090-graphs.yaml` | MTP with two draft tokens and CUDA graphs | 4,096 tokens, two requests at once |
-| `examples/swift-3090-batch.yaml` | Batch without CUDA graphs or int8 activations | 4,096 tokens, two requests at once |
+| Swift Chat (`swift-chat`) | 32,768 tokens | 1 |
+| Swift Long Conversations (`swift-long-conversations`) | 131,072 tokens | 1 |
+| Swift Multiple Conversations (`swift-multiple-conversations`) | 32,768 tokens | Up to 4 |
+| Swift Multiple Long Conversations (`swift-multiple-long-conversations`) | 131,072 tokens | Up to 4 |
 
-With existing weights, copy the chosen YAML into LocalAI's models root and set `parameters.model` to the model directory's relative name. Select an idle GPU and provide writable cache/temp directories. Stop the loaded profile and check GPU memory has returned before switching. The batch example omits SPEC/CTX because HQ ignores them in batch mode. These examples do not establish support for larger batches, longer contexts, int8 activations or other GPUs.
+Limits include both input and replies. They are settings, not a promise that every GPU can hold that much. Conversations share available memory: four full-length inputs may not fit at once. Reduce `MAX_LEN` and `context_size` together, reduce `MAX_SEQS`, or share the model across more GPUs when memory is insufficient. These are experimental starting points, not quality or performance guarantees for every card.
 
-`gallery/models.yaml` contains the same two profiles in JSON, which is valid YAML. Both use the same model directory under `hyperqwen/`. Their 25 files include eight weight shards, downloaded from upstream commit `2e6ad7769c0273e95813090acd147ca9a70c686f` with the publisher's SHA256 checksums. Tests read this list without fetching the files.
+Matching YAML files are under `examples/`. With existing prepared weights, copy one into LocalAI's models root and set `parameters.model` to the model directory's relative name. Give LocalAI writable cache/temp directories. Install or register the HyperQwen backend first.
 
-To add the model gallery to LocalAI, use this repository's raw `gallery/models.yaml` URL at a chosen commit. Keep any other galleries already configured. Listing models does not download weights; installing a recipe downloads 16.9 GB from upstream. Use the existing-weights instructions if you do not want a download. The model names are `swift-hyperqwen-3090-graphs` and `swift-hyperqwen-3090-batch`.
+The gallery uses one shared model directory under `hyperqwen/`. All four recipes list the same 25 files, including eight weight shards, at upstream commit `2e6ad7769c0273e95813090acd147ca9a70c686f`, with the publisher's SHA256 checksums. Listing recipes downloads no weights; installing a recipe downloads about 16.9 GB if the files are not already available. Tests check metadata without downloading those files.
 
-Install or register the HyperQwen backend first. The backend gallery below provides its signed image; the model recipes download weights separately.
+Register the raw `gallery/models.yaml` URL at a chosen commit, keeping any other galleries configured. The new names replace `swift-hyperqwen-3090-graphs` and `swift-hyperqwen-3090-batch`. Existing installed YAMLs are not renamed automatically. Update client model names when switching, and stop the old profile before loading its replacement on the same GPUs.
+
+### Choose GPUs for your deployment
+
+Published profiles contain no GPU IDs, device count or machine-specific paths. They use one GPU unless you configure otherwise. Select idle GPUs explicitly before loading a model; the backend does not find spare GPUs or balance requests across model copies.
+
+**One model across several GPUs:** expose the chosen cards to LocalAI, then add `CUDA_VISIBLE_DEVICES` and a matching `--tensor-parallel-size` to the model YAML's `env`. For example, if you deliberately selected two visible cards:
+
+```yaml
+env:
+  CUDA_VISIBLE_DEVICES: "0,1"
+  EXTRA_ARGS: "--tensor-parallel-size 2"
+```
+
+These are example device indices, not defaults to copy without checking your deployment. Change the selection and count together. For a Multiple Conversations profile, preserve its existing argument:
+
+```yaml
+  EXTRA_ARGS: "--enforce-eager --tensor-parallel-size 2"
+```
+
+Selected cards must support the model's split and be able to communicate inside the container. Provide sufficient container shared memory. More cards do not guarantee faster replies, and not every card count or combination is supported. The adapter forwards this setting to HyperQwen; it does not implement its own GPU distribution.
+
+**Separate model copies:** copy a profile with a distinct `name` for each copy, select a different GPU through each copy's `CUDA_VISIBLE_DEVICES`, and leave out `--tensor-parallel-size`. Each copy needs memory for the whole model. Clients or an external router choose which model name receives each request; this backend does not automatically balance them.
+
+Keep GPU selection in your deployment copies rather than the public gallery. HyperQwen chooses its own memory and attention defaults for the visible hardware. These profiles do not force an RTX-specific implementation or memory fraction. Override `GPU_UTIL` in your deployment if you need more memory headroom.
 
 ## Install the signed backend
 
@@ -130,7 +156,7 @@ The verification policy is required for signed OCI installs. Keep strict integri
 
 Set `TMPDIR` to an existing writable directory with room for the download and extraction. LocalAI stores compressed layers and a temporary tar there; a small `/tmp` can fill even when the backend directory has enough space. If GHCR returns an HTTP/2 `PROTOCOL_ERROR`, retry the install with `GODEBUG=http2client=0`. That changes the HTTP version without disabling signature checks.
 
-This installs the runtime only. Select an example above to use existing prepared weights, or install a model recipe when you intend to download its weights. The supplied profiles target one RTX 3090 with 4,096 tokens and two requests at once.
+This installs the runtime only. Select an example above to use existing prepared weights, or install a model recipe when you intend to download its weights. Choose one of the four profiles above, then select GPUs for your deployment.
 
 Keep the previous signed image digest and gallery commit for rollback. If an update fails, use that catalog revision and stop the affected LocalAI instance before replacing its backend.
 
