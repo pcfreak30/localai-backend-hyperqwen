@@ -82,7 +82,7 @@ HQ reads startup settings from the backend process environment:
 - `HQ_STARTUP_TIMEOUT` and `HQ_REQUEST_TIMEOUT`: finite positive seconds, default 600. The HTTP timeout limits inactivity, not total generation time.
 - `HQ_GRPC_MAX_MESSAGE_MB`: integer from 1 to 512, default 50.
 
-The adapter sets the host, port, API key and internal model name. EXTRA_ARGS cannot override them. Configure startup through HQ environment variables rather than typed load settings or generic engine_args/options. Sampling settings come from each generation request.
+The adapter sets the host, port, API key and internal model name. EXTRA_ARGS cannot override them. LocalAI typed startup properties override equivalent HQ environment settings and conflicting `EXTRA_ARGS`. Supported mappings are `gpu_memory_utilization` → `GPU_UTIL` (also disables fixed `KV_MEM`/cache-memory arguments), `context_size` / `max_model_len` → `MAX_LEN` and `DFLASH_MAX_LEN` (`max_model_len` wins), and native flags for `quantization`, `load_format`, `tensor_parallel_size`, `swap_space`, `enforce_eager`, `trust_remote_code`, `dtype`, `disable_log_status`, and per-prompt image/video/audio limits. Modality limits preserve unmodified modalities. Unset fields preserve native settings; the gRPC schema cannot distinguish explicit false/zero from omission, so those values do not override env settings. Unrelated LocalAI properties do not acquire new runtime functionality. Generic `engine_args/options` remain unsupported. Sampling settings come from each generation request.
 
 Set `template.use_tokenizer_template: true` in LocalAI model YAML for chat and tools. This keeps messages structured so HQ's tokenizer template can handle them.
 
