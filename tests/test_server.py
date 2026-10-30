@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 import httpx
 import grpc
 import backend_pb2_grpc as rpc
@@ -55,10 +56,22 @@ class ServerTests(unittest.IsolatedAsyncioTestCase):
         finally:
             await server.stop(0)
 
-    async def test_conflicting_load_setting_is_rejected(self):
-        result = await Backend().LoadModel(pb.ModelOptions(Model="/unused", TensorParallelSize=2), Context())
+    async def test_typed_settings_reach_launcher(self):
+        with patch('hyperqwen_backend.server.launch_configuration',
+                   side_effect=ValueError('stop before spawn')) as launch:
+            result = await Backend().LoadModel(
+                pb.ModelOptions(Model='/unused', GPUMemoryUtilization=.5,
+                                TensorParallelSize=2), Context())
         self.assertFalse(result.success)
-        self.assertIn("TensorParallelSize", result.message)
+        env = launch.call_args.args[2]
+        self.assertEqual(env['GPU_UTIL'], '0.5')
+        self.assertEqual(env['KV_MEM'], '')
+        self.assertIn('--tensor-parallel-size 2', env['EXTRA_ARGS'])
+
+    async def test_invalid_load_setting_is_rejected(self):
+        result = await Backend().LoadModel(pb.ModelOptions(Model="/unused", GPUMemoryUtilization=1.5), Context())
+        self.assertFalse(result.success)
+        self.assertIn("GPUMemoryUtilization", result.message)
 
     async def test_malformed_upstream_is_data_loss(self):
         class CapturingContext:

@@ -15,6 +15,7 @@ import backend_pb2_grpc as rpc
 
 from hyperqwen_backend.runtime import Runtime, launch_configuration, positive_seconds
 from hyperqwen_backend.transport import prediction_payload, reply_from_json
+from hyperqwen_backend.load_settings import apply_load_settings
 
 
 class Backend(rpc.BackendServicer):
@@ -37,11 +38,7 @@ class Backend(rpc.BackendServicer):
             try:
                 if request.EngineArgs or request.Options:
                     raise ValueError("use HQ startup env, not engine_args/options")
-                typed = ("Quantization", "LoadFormat", "GPUMemoryUtilization", "TensorParallelSize",
-                         "SwapSpace", "MaxModelLen", "EnforceEager", "TrustRemoteCode", "DType")
-                conflicts = [name for name in typed if getattr(request, name, None)]
-                if conflicts:
-                    raise ValueError("use HQ env instead of typed load settings: " + ", ".join(conflicts))
+                environment = apply_load_settings(request, dict(os.environ))
                 startup_timeout = positive_seconds(os.environ.get("HQ_STARTUP_TIMEOUT", "600"), "HQ_STARTUP_TIMEOUT")
                 request_timeout = positive_seconds(os.environ.get("HQ_REQUEST_TIMEOUT", "600"), "HQ_REQUEST_TIMEOUT")
                 root = Path(os.environ.get("HQ_ROOT", "/app"))
@@ -51,7 +48,7 @@ class Backend(rpc.BackendServicer):
                     model = (base / model).resolve()
                     if not model.is_relative_to(base):
                         raise ValueError("model directory escapes LocalAI models path")
-                command, env = launch_configuration(root, model, dict(os.environ))
+                command, env = launch_configuration(root, model, environment)
                 # Reserve a local port briefly. HQ cannot inherit a listening fd;
                 # a competing bind causes a clear startup failure, never reuse it.
                 with socket.socket() as sock:
